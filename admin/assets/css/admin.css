@@ -1,0 +1,135 @@
+body {
+
+    --foxybdr-wp-button-color: #2271b1;
+
+    --foxybdr-dlg-bg-color: #ffffff;
+    --foxybdr-dlg-t-color: #3c434a;
+    --foxybdr-dlg-header-line-color: #d0d0d0;
+    --foxybdr-dlg-button1-t-color: #ffffff;
+    --foxybdr-dlg-button1-bg-color: #113959;
+    --foxybdr-dlg-button1-bg-color-h: #2271b1;
+    --foxybdr-dlg-button2-t-color: #3c434a;
+    --foxybdr-dlg-button2-bg-color: transparent;
+    --foxybdr-dlg-button2-bg-color-h: #d0d0d0;
+
+    --foxybdr-button-bg-color: #113959;
+    --foxybdr-button-bg-color-h: #2271b1;
+    --foxybdr-button-t-color: #ffffff;
+
+    --foxybdr-input-bg-color: #ffffff;
+    --foxybdr-input-br-color: #8c8f94;
+    --foxybdr-input-t-color: #2c3338;
+}
+
+body.foxybdr-wait {
+    cursor: wait;
+    filter: opacity(50%);
+}
+
+#adminmenu #toplevel_page_foxybuilder div.wp-menu-image:before {
+    content: "\f101";
+    font-family: foxybuilder;
+    font-size: 24px;
+    margin-block-start: -1px;
+}
+
+.foxybdr-admin-page h1 {
+    margin: 32px 0px;
+    font-size: 32px;
+    font-weight: bold;
+    line-height: 1.0;
+}
+
+.foxybdr-dialog {
+    position: fixed;
+    left: 0px;
+    top: 0px;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.8);
+    opacity: 0.0;
+    transition-property: opacity;
+    transition-duration: 0.3s;
+    transition-timing-function: linear;
+}
+
+.foxybdr-dialog, .foxybdr-dialog * {
+    box-sizing: border-box;
+    user-select: none;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+}
+
+.foxybdr-dialog.foxybdr-show {
+    opacity: 1.0;
+}
+
+.foxybdr-dialog-confirm {
+}
+
+.foxybdr-dialog-wait.foxybdr-dialog {
+    transition-duration: 0.01s;
+}
+
+    .foxybdr-dialog-box {
+        width: 400px;
+        border-radius: 3px;
+        background-color: var(--foxybdr-dlg-bg-color);
+        color: var(--foxybdr-dlg-t-color);
+        font-family: Arial, sans-serif;
+        font-weight: normal;
+        line-height: 1em;
+    }
+
+        .foxybdr-dialog-header {
+            border-bottom: 1px solid var(--foxybdr-dlg-header-line-color);
+            padding: 20px 20px 10px 20px;
+            font-size: 15px;
+            font-weight: bold;
+            text-align: left;
+        }
+
+        .foxybdr-dialog-message {
+            padding: 10px 20px 10px 20px;
+            font-size: 13px;
+            text-align: left;
+            line-height: 1.5em;
+        }
+
+        .foxybdr-dialog-buttons {
+            padding: 10px 20px 20px 20px;
+            text-align: right;
+        }
+
+            .foxybdr-dialog-buttons button {
+                border-width: 0px;
+                border-radius: 3px;
+                padding: 10px 20px;
+                font-size: 12px;
+                font-weight: bold;
+                cursor: pointer;
+                transition-property: background-color;
+                transition-duration: 0.25s;
+                transition-timing-function: linear;
+            }
+
+            .foxybdr-dialog-cancel {
+                background-color: var(--foxybdr-dlg-button2-bg-color);
+                color: var(--foxybdr-dlg-button2-t-color);
+            }
+            .foxybdr-dialog-cancel:hover {
+                background-color: var(--foxybdr-dlg-button2-bg-color-h);
+            }
+
+            .foxybdr-dialog-ok {
+                background-color: var(--foxybdr-dlg-button1-bg-color);
+                color: var(--foxybdr-dlg-button1-t-color);
+            }
+            .foxybdr-dialog-ok:hover {
+                background-color: var(--foxybdr-dlg-button1-bg-color-h);
+            }
+

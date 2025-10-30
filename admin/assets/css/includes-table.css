@@ -1,0 +1,179 @@
+.foxybdr-admin-includes-table {
+    width: 100%;
+    border: 1px solid #c3c4c7;
+    border-spacing: 0;
+    border-collapse: separate;
+    background-color: #ffffff;
+    table-layout: fixed;
+}
+
+    .foxybdr-admin-includes-table * {
+        word-wrap: break-word;
+    }
+
+    .foxybdr-admin-includes-table a {
+        text-decoration: none;
+    }
+
+    .foxybdr-admin-includes-table thead th {
+        border-bottom: 1px solid #c3c4c7;
+        padding: 8px;
+        color: #2c3338;
+        font-size: 14px;
+        font-weight: 400;
+        line-height: 1.4em;
+        text-align: left;
+    }
+
+    .foxybdr-admin-includes-table thead th.foxybdr-talign-left {
+        text-align: left;
+    }
+    .foxybdr-admin-includes-table thead th.foxybdr-talign-center {
+        text-align: center;
+    }
+    .foxybdr-admin-includes-table thead th.foxybdr-talign-right {
+        text-align: right;
+    }
+
+    .foxybdr-admin-includes-table thead th.foxybdr-sortable {
+        padding: 0px;
+    }
+
+    .foxybdr-admin-includes-table thead th.foxybdr-sortable a {
+        display: block;
+        overflow: hidden;
+        padding: 8px;
+        color: #2c3338;
+    }
+    .foxybdr-admin-includes-table thead th.foxybdr-sortable a:hover {
+        background-color: #ffffe0;
+        color: #2271b1;
+    }
+
+        .foxybdr-admin-includes-table thead th .dashicons {
+            display: none;
+        }
+        .foxybdr-admin-includes-table thead th.foxybdr-sortable.foxybdr-sort-asc .dashicons-arrow-up {
+            display: inline-block;
+        }
+        .foxybdr-admin-includes-table thead th.foxybdr-sortable.foxybdr-sort-desc .dashicons-arrow-down {
+            display: inline-block;
+        }
+
+    .foxybdr-admin-includes-table > tbody > tr:nth-child(odd) {
+        background-color: #f6f7f7;
+    }
+
+        .foxybdr-admin-includes-table td {
+            padding: 8px;
+            color: #50575e;
+            font-size: 13px;
+            line-height: 1.5em;
+            text-align: left;
+            vertical-align: top;
+        }
+
+        .foxybdr-admin-includes-table td.foxybdr-talign-left {
+            text-align: left;
+        }
+        .foxybdr-admin-includes-table td.foxybdr-talign-center {
+            text-align: center;
+        }
+        .foxybdr-admin-includes-table td.foxybdr-talign-right {
+            text-align: right;
+        }
+
+            .foxybdr-admin-includes-table td .foxybdr-post-title {
+                color: #2271b1;
+                font-size: 14px;
+                font-weight: bold;
+            }
+
+            .foxybdr-admin-includes-table td .foxybdr-post-title:hover {
+                background-color: #ffffe0;
+                color: #800000;
+            }
+
+            .foxybdr-admin-includes-table td .foxybdr-row-actions {
+                position: relative;
+                left: -9999em;
+                padding: 2px 0 0;
+                font-size: 13px;
+                color: #a7aaad;
+            }
+
+            .foxybdr-admin-includes-table tr:hover td .foxybdr-row-actions {
+                left: 0em;
+            }
+
+                .foxybdr-admin-includes-table td .foxybdr-row-actions .foxybdr-link {
+                    color: #2271b1;
+                    cursor: pointer;
+                }
+
+                .foxybdr-admin-includes-table td .foxybdr-row-actions .foxybdr-link:hover {
+                    background-color: #ffffe0;
+                    color: #800000;
+                }
+
+.foxybdr-control-panel {
+    display: flex;
+    justify-content: flex-end;
+    padding: 8px 0px;
+}
+
+.foxybdr-paging-button {
+    min-width: 30px;
+    min-height: 30px;
+    display: inline-block;
+    margin: 0;
+    border: 1px solid #2271b1;
+    border-radius: 3px;
+    padding: 0 4px;
+    background: #f6f7f7;
+    color: #2271b1;
+    font-size: 16px;
+    line-height: 1.625;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+    vertical-align: baseline;
+    white-space: nowrap;
+    box-sizing: border-box;
+    -webkit-appearance: none;
+}
+
+span.foxybdr-paging-button {
+    border-color: #dcdcde;
+    color: #a7aaad;
+    cursor: default;
+}
+
+a.foxybdr-paging-button:hover {
+    border-color: #800000;
+    background-color: #ffffe0;
+    color: #800000;
+}
+
+a.foxybdr-paging-button:active,
+a.foxybdr-paging-button:focus {
+    box-shadow: none;
+}
+
+.foxybdr-paging-input {
+    min-height: 30px;
+    margin: 0 2px 0 0;
+    border: 1px solid #8c8f94;
+    border-radius: 4px;
+    padding: 0 8px;
+    background-color: #fff;
+    color: #2c3338;
+    font-size: 13px;
+    text-align: center;
+    line-height: 2;
+    box-sizing: border-box;
+}
+
+.foxybdr-paging-page span span {
+    margin-right: 2px;
+}

@@ -1,0 +1,15 @@
+.foxybdr-notice span.dashicons {
+    margin-right: 3px;
+}
+
+.foxybdr-notice.updated span.dashicons {
+    color: #00a32a;
+}
+
+.foxybdr-notice.notice-warning span.dashicons {
+    color: #dba617;
+}
+
+.foxybdr-notice.notice-error span.dashicons {
+    color: #d63638;
+}

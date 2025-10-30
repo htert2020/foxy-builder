@@ -1,0 +1,23 @@
+.foxybdr-panel {
+    border: 1px solid #c3c4c7;
+    background-color: #ffffff;
+}
+
+    .foxybdr-panel .foxybdr-panel-title-bar {
+        min-width: 255px;
+        border-bottom: 1px solid #c3c4c7;
+        padding: 16px;
+    }
+
+        .foxybdr-panel .foxybdr-panel-title-bar > h2 {
+            margin: 0px;
+            color: #3c434a;
+            font-size: 16px;
+            line-height: 1.0;
+        }
+
+    .foxybdr-panel .foxybdr-panel-body {
+        padding: 16px;
+        background-color: #f6f7f7;
+    }
+

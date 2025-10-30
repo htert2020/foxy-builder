@@ -1,0 +1,65 @@
+#foxybdr-admin-top-bar {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: calc(100% - 160px);
+    height: 50px;
+    box-sizing: border-box;
+    z-index: 1;
+    display: flex;
+    justify-content: flex-start;
+    align-items: center;
+    align-content: center;
+    padding: 10px;
+    background-color: #ffffff;
+    font-family: Roboto, Arial, Helvetica, sans-serif;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.03);
+}
+
+    #foxybdr-admin-top-bar .foxybdr-title {
+        margin-inline-end: 40px;
+    }
+
+        #foxybdr-admin-top-bar .foxybdr-title i {
+            position: relative;
+            top: 0px;
+            margin-right: 10px;
+            color: #515962;
+            font-size: 30px;
+            vertical-align: middle;
+        }
+
+        #foxybdr-admin-top-bar .foxybdr-title span {
+            color: #515962;
+            font-size: 15px;
+            font-weight: 700;
+            vertical-align: middle;
+        }
+
+    #foxybdr-admin-top-bar .foxybdr-buttons {
+        display: inline-flex;
+        gap: 5px;
+    }
+
+        #foxybdr-admin-top-bar .foxybdr-buttons a {
+            border: none;
+            border-radius: 3px;
+            padding: 8px 16px;
+            background-color: #515962;
+            color: #ffffff;
+            font-size: 12px;
+            font-weight: 500;
+            line-height: 1.2;
+            text-transform: uppercase;
+            text-decoration: none;
+            transition: all 0.3s;
+            outline: none;
+        }
+
+        #foxybdr-admin-top-bar .foxybdr-buttons a:hover {
+            background-color: #3a4046;
+        }
+
+#foxybdr-admin-top-bar ~ #wpbody #wpbody-content {
+    margin-top: 50px;
+}

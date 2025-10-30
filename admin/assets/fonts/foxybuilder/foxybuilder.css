@@ -1,0 +1,30 @@
+@font-face {
+    font-family: "foxybuilder";
+    src: url("./foxybuilder.eot?ca257c18bbb5b39fc50bdd4fd26142c6#iefix") format("embedded-opentype"),
+url("./foxybuilder.woff2?ca257c18bbb5b39fc50bdd4fd26142c6") format("woff2"),
+url("./foxybuilder.woff?ca257c18bbb5b39fc50bdd4fd26142c6") format("woff");
+}
+
+i[class^="foxybdr-"]:before, i[class*=" foxybdr-"]:before {
+    font-family: foxybuilder !important;
+    font-style: normal;
+    font-weight: normal !important;
+    font-variant: normal;
+    text-transform: none;
+    line-height: 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+.foxybdr-logo:before {
+    content: "\f101";
+}
+.foxybdr-logocircle:before {
+    content: "\f102";
+}
+.foxybdr-nav-house:before {
+    content: "\f103";
+}
+.foxybdr-nav-key:before {
+    content: "\f104";
+}
