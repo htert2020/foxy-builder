@@ -1,0 +1,53 @@
+.foxybdr-control {
+    display: flex;
+}
+
+.foxybdr-control.foxybdr-control-multirow {
+    flex-wrap: wrap;
+}
+
+    .foxybdr-control-prompt {
+        display: flex;
+        justify-content: space-between;
+        width: 50%;
+    }
+
+    .foxybdr-control.foxybdr-control-multirow .foxybdr-control-prompt {
+        width: 100%;
+    }
+
+        .foxybdr-control-prompt > div {
+            display: flex;
+            align-items: center;
+        }
+
+            .foxybdr-control-prompt > div > .foxybdr-control-label {
+                color: var(--foxybdr-general-t-color);
+                font-family: var(--foxybdr-general-font);
+                font-size: 12px;
+                font-weight: normal;
+                line-height: 1.0;
+            }
+
+    .foxybdr-control-input {
+        display: flex;
+        justify-content: flex-end;
+        width: 50%;
+    }
+
+    .foxybdr-control.foxybdr-control-multirow .foxybdr-control-input {
+        width: 100%;
+    }
+
+.foxybdr-input-text {
+    width: 100%;
+    border-width: 0px;
+    border-radius: 4px;
+    padding: 8px;
+    background-color: var(--foxybdr-input-bg-color);
+    color: var(--foxybdr-input-t-color);
+    font-family: var(--foxybdr-general-font);
+    font-size: 12px;
+    font-weight: normal;
+    line-height: 1.0;
+}

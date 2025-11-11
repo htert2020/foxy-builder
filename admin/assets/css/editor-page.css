@@ -1,0 +1,428 @@
+* {
+	box-sizing: border-box;
+}
+
+body {  /* CONFIGURABLE CSS VARIABLES */
+	--foxybdr-general-bg-color: #202020;
+	--foxybdr-general-br-color: #383838;
+	--foxybdr-general-t-color: #c0c0c0;
+	--foxybdr-input-bg-color: #383838;
+	--foxybdr-input-t-color: #c0c0c0;
+	--foxybdr-popup-bg-color: #383838;
+	--foxybdr-popup-t-color: #c0c0c0;
+	--foxybdr-popup-input-bg-color: #505050;
+	--foxybdr-popup-input-t-color: #c0c0c0;
+	--foxybdr-resizer-width: 8px;
+	--foxybdr-resizer-bg-color: #505050;
+	--foxybdr-resizer-button-t-color: #c0c0c0;
+	--foxybdr-general-font: Arial, Verdana, Helvetica, sans-serif;
+}
+
+body {
+	font-family: var(--foxybdr-general-font);
+}
+
+input:focus {
+	outline: none;
+}
+
+.foxybdr-general-box {
+	border-style: solid;
+	border-width: 1px;
+	border-color: var(--foxybdr-general-br-color) var(--foxybdr-general-br-color) var(--foxybdr-general-bg-color) var(--foxybdr-general-bg-color);
+	padding: 8px;
+	background-color: var(--foxybdr-general-bg-color);
+	color: var(--foxybdr-general-t-color);
+	line-height: 1.0;
+}
+
+#foxybdr-editor-screen {
+	position: fixed;
+	left: 0px;
+	top: 0px;
+	width: 100%;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	background-color: #ffffff;
+	--foxybdr-top-height: 40px;
+}
+
+	#foxybdr-editor-toolbar {
+		height: var(--foxybdr-top-height);
+		display: flex;
+		justify-content: space-between;
+		padding: 0px;
+		font-size: 20px;
+	}
+
+		#foxybdr-editor-toolbar > div {
+			display: flex;
+		}
+
+			#foxybdr-editor-toolbar > div > div {
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				padding: 8px;
+				cursor: pointer;
+				transition: all linear 0.2s;
+			}
+
+			#foxybdr-editor-toolbar > div > div:hover {
+				background-color: var(--foxybdr-popup-input-bg-color);
+				color: #ffffff;
+			}
+
+			#foxybdr-save-button {
+				border-radius: 4px;
+				padding: 8px 24px;
+				background-color: #00c000;
+				color: #ffffff;
+				font-size: 12px;
+				line-height: 1.0;
+				text-transform: uppercase;
+				cursor: pointer;
+				transition: all linear 0.2s;
+			}
+
+			#foxybdr-save-button:hover {
+				background-color: #c0ffc0;
+				color: #004000;
+			}
+
+	#foxybdr-editor-body {
+		position: relative;
+		height: calc(100% - var(--foxybdr-top-height));
+	}
+
+		#foxybdr-panel-and-canvas {
+			position: absolute;
+			left: 0px;
+			top: 0px;
+			width: 100%;
+			height: 100%;
+			z-index: 0;
+			--foxybdr-left-width-show: 300px;
+			--foxybdr-left-width: 300px;
+			display: flex;
+		}
+
+			#foxybdr-panel-resizable-backplate {
+				position: relative;
+				width: var(--foxybdr-left-width);
+				min-width: var(--foxybdr-resizer-width);
+				z-index: 10;
+			}
+
+				#foxybdr-panel {
+					position: absolute;
+					right: 0px;
+					top: 0px;
+					width: var(--foxybdr-left-width-show);
+					min-width: 120px;
+					height: 100%;
+					z-index: 0;
+					display: flex;
+					flex-direction: column;
+					--foxybdr-header-height: 60px;
+				}
+
+					#foxybdr-panel-header {
+						height: var(--foxybdr-header-height);
+						display: flex;
+						justify-content: space-between;
+						padding: 0px 8px;
+						font-size: 16px;
+						font-weight: normal;
+					}
+
+						#foxybdr-panel-header > div {
+							display: flex;
+							align-items: center;
+							padding: 8px;
+						}
+
+						#foxybdr-panel-title {
+							color: #ffffff;
+							font-weight: bold;
+							text-transform: none;
+							user-select: none;
+						}
+
+						#foxybdr-widgets-button {
+							cursor: pointer;
+							transition: all linear 0.2s;
+						}
+
+						#foxybdr-widgets-button:hover {
+							background-color: var(--foxybdr-popup-input-bg-color);
+							color: #ffffff;
+						}
+
+					#foxybdr-panel-body {
+						position: relative;
+						border-width: 0px;
+						height: calc(100% - var(--foxybdr-header-height));
+					}
+
+						#foxybdr-panel-body > * {
+							display: none;
+						}
+
+						#foxybdr-panel-body > *.foxybdr-show {
+							display: initial;
+						}
+
+				#foxybdr-panel-resizer {
+					position: absolute;
+					right: 0px;
+					top: 0px;
+					width: var(--foxybdr-resizer-width);
+					height: 100%;
+					z-index: 10;
+					background-color: transparent;
+					cursor: ew-resize;
+					transition: all linear 0.2s;
+				}
+
+				#foxybdr-panel-resizer:hover {
+					background-color: var(--foxybdr-resizer-bg-color);
+				}
+
+				#foxybdr-panel-resizer-button {
+					position: absolute;
+					left: 100%;
+					top: 50%;
+					width: 16px;
+					height: 48px;
+					z-index: 10;
+					display: flex;
+					justify-content: center;
+					align-items: center;
+					transform: translate(0%, -50%);
+					background-color: var(--foxybdr-resizer-bg-color);
+					cursor: pointer;
+					opacity: 0.25;
+				}
+
+				#foxybdr-panel-resizer-button:hover {
+					opacity: 1.0;
+				}
+
+					#foxybdr-panel-resizer-button .dashicons {
+						color: var(--foxybdr-resizer-button-t-color);
+					}
+
+			#foxybdr-canvas-backplate {
+				position: relative;
+				width: calc(100% - var(--foxybdr-left-width) - var(--foxybdr-resizer-width));
+				z-index: 0;
+			}
+
+		#foxybdr-drawer-resizable-backplate {
+			position: absolute;
+			right: 0px;
+			top: 0px;
+			--foxybdr-width-show: 300px;
+			width: 300px;
+			min-width: var(--foxybdr-resizer-width);
+			height: 100%;
+			z-index: 10;
+		}
+
+			#foxybdr-drawer-resizer {
+				position: absolute;
+				left: 0px;
+				top: 0px;
+				width: var(--foxybdr-resizer-width);
+				height: 100%;
+				z-index: 10;
+				background-color: transparent;
+				cursor: ew-resize;
+				transition: all linear 0.2s;
+			}
+
+			#foxybdr-drawer-resizer:hover {
+				background-color: var(--foxybdr-resizer-bg-color);
+			}
+
+			#foxybdr-drawer-resizer-button {
+				position: absolute;
+				right: 100%;
+				top: 50%;
+				width: 16px;
+				height: 48px;
+				z-index: 10;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+				transform: translate(0%, -50%);
+				background-color: var(--foxybdr-resizer-bg-color);
+				cursor: pointer;
+				opacity: 0.25;
+			}
+
+			#foxybdr-drawer-resizer-button:hover {
+				opacity: 1.0;
+			}
+
+				#foxybdr-drawer-resizer-button .dashicons {
+					color: var(--foxybdr-resizer-button-t-color);
+				}
+
+			#foxybdr-drawer {
+				position: absolute;
+				left: 0px;
+				top: 0px;
+				width: var(--foxybdr-width-show);
+				min-width: 120px;
+				height: 100%;
+				z-index: 0;
+			}
+
+.foxybdr-settings-module {
+	position: absolute;
+	left: 0px;
+	top: 0px;
+	width: 100%;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	--foxybdr-top-height: 48px;
+}
+
+	.foxybdr-settings-module > .foxybdr-tabs {
+		height: var(--foxybdr-top-height);
+		display: flex;
+		overflow-x: auto;
+		scrollbar-width: thin;
+		scroll-behavior: smooth;
+		scrollbar-color: #80808020 #ffffff20;
+		transition: all linear 0.2s;
+	}
+
+	.foxybdr-settings-module > .foxybdr-tabs:hover {
+		scrollbar-color: #808080c0 #ffffffc0;
+	}
+
+		.foxybdr-settings-module > .foxybdr-tabs > .foxybdr-tab {
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			border-style: solid;
+			border-color: var(--foxybdr-popup-input-bg-color);
+			border-width: 1px 1px 0px 0px;
+			border-radius: 4px 4px 0px 0px;
+			padding: 8px 16px;
+			background-color: transparent;
+			color: #808080;
+			font-size: 12px;
+			line-height: 1.0;
+			user-select: none;
+			white-space: nowrap;
+			cursor: pointer;
+			transition: all linear 0.2s;
+		}
+
+		.foxybdr-settings-module > .foxybdr-tabs > .foxybdr-tab:not(.foxybdr-active):hover {
+			color: #ffffff;
+		}
+
+		.foxybdr-settings-module > .foxybdr-tabs > .foxybdr-tab.foxybdr-active {
+			background-color: var(--foxybdr-popup-input-bg-color);
+			color: #ffffff;
+		}
+
+	.foxybdr-settings-module > .foxybdr-tab-body {
+		height: calc(100% - var(--foxybdr-top-height));
+		background-color: var(--foxybdr-general-bg-color);
+		overflow-y: auto;
+		scroll-behavior: smooth;
+		scrollbar-color: #80808040 #ffffff20;
+	}
+
+		.foxybdr-settings-module > .foxybdr-tab-body > .foxybdr-tab-page {
+			display: none;
+			flex-direction: column;
+			gap: 0px;
+		}
+
+		.foxybdr-settings-module > .foxybdr-tab-body > .foxybdr-tab-page.foxybdr-active {
+			display: flex;
+		}
+
+			.foxybdr-settings-module .foxybdr-tab-page-section {
+				border-style: solid;
+				border-color: var(--foxybdr-general-br-color);
+				border-width: 1px 1px 0px 1px;
+				user-select: none;
+			}
+
+			.foxybdr-settings-module .foxybdr-tab-page-section:last-child {
+				border-bottom-width: 1px;
+			}
+
+				.foxybdr-settings-module .foxybdr-tab-page-section > .foxybdr-header {
+					display: flex;
+					align-items: center;
+					gap: 4px;
+					padding: 16px 16px 16px 8px;
+					color: var(--foxybdr-popup-input-t-color);
+					cursor: pointer;
+				}
+
+				.foxybdr-settings-module .foxybdr-tab-page-section > .foxybdr-header:hover {
+					background-color: var(--foxybdr-general-br-color);
+				}
+
+					.foxybdr-settings-module .foxybdr-tab-page-section > .foxybdr-header > span {
+						color: #ffffff;
+						font-size: 14px;
+						font-weight: bold;
+						line-height: 1.0;
+					}
+
+					.foxybdr-settings-module .foxybdr-tab-page-section > .foxybdr-header > span.dashicons {
+						font-size: 20px;
+						font-weight: normal;
+					}
+
+					.foxybdr-settings-module .foxybdr-tab-page-section.foxybdr-active > .foxybdr-header > .dashicons-arrow-right {
+						display: none;
+					}
+
+					.foxybdr-settings-module .foxybdr-tab-page-section:not(.foxybdr-active) > .foxybdr-header > .dashicons-arrow-down {
+						display: none;
+					}
+
+				.foxybdr-settings-module .foxybdr-tab-page-section > .foxybdr-body {
+					display: flex;
+					flex-direction: column;
+					gap: 8px;
+					padding: 16px;
+					overflow-y: clip;
+					transition: all linear 0.2s;
+				}
+
+				.foxybdr-settings-module .foxybdr-tab-page-section:not(.foxybdr-active) > .foxybdr-body {
+					height: 0px;
+					padding: 0px;
+				}
+
+/* BEGIN TINYMCE WYSIWYG **************************************************************/
+
+.mce-tinymce {
+    border-radius: 4px;
+}
+
+.mce-container.mce-flow-layout-item > div {
+    white-space: normal;
+}
+
+.mce-colorbutton-grid .mce-custom-color-btn button {
+    color: #0080ff;
+    text-decoration: underline;
+}
+
+/* END TINYMCE WYSIWYG **************************************************************/
