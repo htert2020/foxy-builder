@@ -51,3 +51,7 @@
     font-weight: normal;
     line-height: 1.0;
 }
+
+.foxybdr-input-text::placeholder {
+    color: var(--foxybdr-input-p-color);
+}

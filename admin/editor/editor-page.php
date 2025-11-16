@@ -24,9 +24,13 @@ if (!defined('ABSPATH'))
 				<div id="foxybdr-toolbar-btn-preview"><span class="dashicons dashicons-visibility"></span></div>
 			</div>
 			<div id="foxybdr-toolbar-center">
-				<div><span class="dashicons dashicons-desktop"></span></div>
-				<div><span class="dashicons dashicons-tablet"></span></div>
-				<div><span class="dashicons dashicons-smartphone"></span></div>
+				<div class="foxybdr-device-btn foxybdr-device-desktop">
+					<span class="dashicons dashicons-desktop"></span>
+				</div>
+				<div class="foxybdr-device-btn foxybdr-device-tablet">
+					<span class="dashicons dashicons-tablet"></span>
+				</div>
+				<div class="foxybdr-device-btn foxybdr-device-mobile"><span class="dashicons dashicons-smartphone"></span></div>
 			</div>
 			<div id="foxybdr-toolbar-right">
 				<button id="foxybdr-save-button">
@@ -79,6 +83,32 @@ if (!defined('ABSPATH'))
 			</div>
 			<div class="foxybdr-body">
 			</div>
+		</div>
+	</script>
+
+	<script id="foxybdr-tmpl-widgets-module" type="text/html">
+		<div class="foxybdr-widgets-module">
+			<div class="foxybdr-header"></div>
+			<div class="foxybdr-body"></div>
+		</div>
+	</script>
+
+	<script id="foxybdr-tmpl-widgets-module-category" type="text/html">
+		<div class="foxybdr-category">
+			<div class="foxybdr-header">
+				<span class="dashicons dashicons-arrow-right"></span>
+				<span class="dashicons dashicons-arrow-down"></span>
+				<span class="foxybdr-title"></span>
+			</div>
+			<div class="foxybdr-body">
+			</div>
+		</div>
+	</script>
+
+	<script id="foxybdr-tmpl-widgets-module-card" type="text/html">
+		<div class="foxybdr-card" draggable="true">
+			<i></i>
+			<span></span>
 		</div>
 	</script>
 

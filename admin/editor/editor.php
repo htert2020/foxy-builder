@@ -6,6 +6,8 @@ if (!defined('ABSPATH'))
     exit;
 
 require_once FOXYBUILDER_PLUGIN_PATH . '/modules/document.php';
+require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widget-manager.php';
+require_once FOXYBUILDER_PLUGIN_PATH . '/modules/asset-manager.php';
 
 class Editor
 {
@@ -28,6 +30,10 @@ class Editor
     public function init()
     {
         add_action('admin_action_foxy_builder', [ $this, 'action_foxy_builder' ]);
+
+        \FoxyBuilder\Modules\WidgetManager::instance()->add_category('layout', 'Layout');
+
+        \FoxyBuilder\Modules\WidgetManager::instance()->add_widgets();
     }
 
     public function action_foxy_builder()
@@ -76,119 +82,42 @@ class Editor
     {
         global $wp_styles, $wp_scripts;
 
+        $categories = \FoxyBuilder\Modules\WidgetManager::instance()->build_category_definitions();
+        $widgets = \FoxyBuilder\Modules\WidgetManager::instance()->build_widget_definitions();
+
+        $foxybuilder_icon_url = FOXYBUILDER_PLUGIN_URL . "admin/assets/fonts/foxybuilder/foxybuilder.css?ver=" . FOXYBUILDER_VERSION;
+
+        $icon_libraries = \FoxyBuilder\Modules\AssetManager::instance()->get_icon_libraries();
+        $fas_icon_urls = $icon_libraries['fas']['css_urls'];
+
         $wp_styles = new \WP_Styles();
         $wp_scripts = new \WP_Scripts();
     
+        $suffix = defined('SCRIPT_DEBUG') && SCRIPT_DEBUG ? '' : '.min';
+
         wp_enqueue_style('foxybdr-admin-wp-common', FOXYBUILDER_PLUGIN_URL . "admin/assets/css/wp-common.css", [], FOXYBUILDER_VERSION);
-    
         wp_enqueue_style('foxybdr-admin-editor-page', FOXYBUILDER_PLUGIN_URL . "admin/assets/css/editor-page.css", [], FOXYBUILDER_VERSION);
         wp_enqueue_style('foxybdr-admin-editor-controls', FOXYBUILDER_PLUGIN_URL . "admin/assets/css/editor-controls.css", [], FOXYBUILDER_VERSION);
     
         wp_enqueue_script('foxybdr-admin-editor-page', FOXYBUILDER_PLUGIN_URL . 'admin/assets/js/editor-page.js', [], FOXYBUILDER_VERSION);
+        wp_enqueue_script('foxybdr-admin-editor-controls', FOXYBUILDER_PLUGIN_URL . 'admin/assets/js/editor-controls.js', [], FOXYBUILDER_VERSION);
+
         wp_localize_script('foxybdr-admin-editor-page', 'FOXYAPP', [
             'ajaxUrl' => admin_url('admin-ajax.php'),
-            'widget_categories' => [],
-            'widgets' => [
-                'foxybdr.settings.site' => [
-                    'title' =>  'Site Settings',
-                    'icon' =>  '',
-                    'tabs' =>  [
-                        [
-                            'title' =>  'Site Identity',
-                            'sections' =>  [
-                                [
-                                    'title' =>  'Website',
-                                    'settings' =>  [
-                                        'identity.title',
-                                        'identity.description',
-                                        'identity.favicon'
-                                    ]
-                                ],
-                                [
-                                    'title' =>  'Address',
-                                    'settings' =>  [
-                                        'identity.full_name',
-                                        'identity.address',
-                                        'identity.city',
-                                        'identity.state',
-                                        'identity.postal_code',
-                                        'identity.country'
-                                    ]
-                                ]
-                            ]
-                        ],
-                        [
-                            'title' =>  'Palettes',
-                            'sections' =>  [
-                            ]
-                        ],
-                        [
-                            'title' =>  'Default Styles',
-                            'sections' =>  [
-                            ]
-                        ],
-                        [
-                            'title' =>  'Breakpoints',
-                            'sections' =>  [
-                            ]
-                        ],
-                        [
-                            'title' =>  'Global CSS',
-                            'sections' =>  [
-                            ]
-                        ]
-                    ],
-                    'settings' =>  [
-                        'identity.title' =>  [
-                            'label'    =>  'Site Title',
-                            'type'     =>  'TEXT',
-                            'default'  =>  'My Website Name'
-                        ],
-                        'identity.description' =>  [
-                            'label'    =>  'Site Description',
-                            'type'     =>  'TEXT',
-                            'default'  =>  ''
-                        ],
-                        'identity.favicon' =>  [
-                            'label'    =>  'Site Icon',
-                            'type'     =>  'TEXT',
-                            'default'  =>  ''
-                        ],
-                        'identity.full_name' =>  [
-                            'label'    =>  'Full Name',
-                            'type'     =>  'TEXT',
-                            'default'  =>  ''
-                        ],
-                        'identity.address' =>  [
-                            'label'    =>  'Street Address',
-                            'type'     =>  'TEXT',
-                            'default'  =>  ''
-                        ],
-                        'identity.city' =>  [
-                            'label'    =>  'City',
-                            'type'     =>  'TEXT',
-                            'default'  =>  ''
-                        ],
-                        'identity.state' =>  [
-                            'label'    =>  'State',
-                            'type'     =>  'TEXT',
-                            'default'  =>  ''
-                        ],
-                        'identity.postal_code' =>  [
-                            'label'    =>  'Postal Code',
-                            'type'     =>  'TEXT',
-                            'default'  =>  ''
-                        ],
-                        'identity.country' =>  [
-                            'label'    =>  'Country',
-                            'type'     =>  'TEXT',
-                            'default'  =>  ''
-                        ],
-                    ],
-                ],
+            'widgetCategories' => $categories,
+            'widgets' => $widgets,
+            'assets' => [
+                'iconLibraries' => $icon_libraries,
             ],
+            'requiredAssetUrls' => $fas_icon_urls,
         ]);
-        wp_enqueue_script('foxybdr-admin-editor-controls', FOXYBUILDER_PLUGIN_URL . 'admin/assets/js/editor-controls.js', [], FOXYBUILDER_VERSION);
+
+        ?><link href="<?php echo esc_url($foxybuilder_icon_url); ?>" rel="stylesheet" type="text/css" /><?php
+
+        foreach ($fas_icon_urls as $url)
+        {
+            ?><link href="<?php echo esc_url($url); ?>" rel="stylesheet" type="text/css" foxybdr-asset="foxybdr-asset" /><?php
+        }
     
         wp_print_scripts([ 'wp-tinymce' ]);
     

@@ -17,6 +17,8 @@ FoxyControls.load = function()
         setting = null;
         value = null;
 
+        deviceMode = '';
+
         controlElement = null;
 
         constructor(name, setting, value)
@@ -26,6 +28,8 @@ FoxyControls.load = function()
             this.name = name;
             this.setting = setting;
             this.value = value;
+
+            this.deviceMode = FoxyApp.Model.device.deviceMode;
         }
 
         create(parentElement)
@@ -37,15 +41,100 @@ FoxyControls.load = function()
             parentElement.appendChild(this.controlElement);
         }
 
-        onChanged(newValue)
+        handleEvent(e)
         {
+            if (e.type === 'device-change')
+            {
+                this.deviceMode = FoxyApp.Model.device.deviceMode;
+
+                if (this.setting.responsive)
+                {
+                    let dv = this.getDisplayValue();
+
+                    this.onDisplayValueChanged(dv.displayValue, dv.defaultValue);
+                }
+            }
+        }
+
+        getDisplayValue()
+        {
+            let displayValue = null;
+            let defaultValue = null;
+
+            if (this.setting.responsive)
+            {
+                if (this.value !== null)
+                {
+                    if (this.value[this.deviceMode] !== undefined)
+                        displayValue = this.value[this.deviceMode];
+
+                    const deviceToIndex = {
+                        desktop: 0,
+                        tablet:  1,
+                        mobile:  2
+                    };
+
+                    const indexToDevice = [ 'desktop', 'tablet', 'mobile' ];
+
+                    for (let i = deviceToIndex[this.deviceMode] - 1; i >= 0; i--)
+                    {
+                        let v = this.value[indexToDevice[i]];
+
+                        if (v !== undefined)
+                        {
+                            defaultValue = v;
+                            break;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                displayValue = this.value;
+            }
+
+            return {
+                displayValue: displayValue,
+                defaultValue: defaultValue
+            };
+        }
+
+        setDisplayValue(newValue)
+        {
+            if (this.setting.responsive)
+            {
+                if (newValue !== null)
+                {
+                    if (this.value === null)
+                        this.value = {};
+
+                    this.value[this.deviceMode] = newValue;
+                }
+                else
+                {
+                    if (this.value !== null)
+                    {
+                        if (this.value[this.deviceMode] !== undefined)
+                            delete this.value[this.deviceMode];
+
+                        if (Object.keys(this.value).length === 0)
+                            this.value = null;
+                    }
+                }
+            }
+            else
+            {
+                this.value = newValue;
+            }
+
             this.sendEvent({
-                currentTargetType: 'control',
-                type: 'change',
+                type: 'control-change',
                 name: this.name,
-                value: newValue
+                value: this.value
             });
         }
+
+        onDisplayValueChanged(displayValue, defaultValue) {}  // overridable
 
         destroy()
         {
@@ -62,7 +151,6 @@ FoxyControls.load = function()
     FoxyControls.Class.Text = class extends FoxyControls.Class.BaseControl
     {
         #textInputElement = null;
-        #oldValue = '';
 
         constructor(name, setting, value)
         {
@@ -75,29 +163,31 @@ FoxyControls.load = function()
 
             this.#textInputElement = FoxyApp.elementCache.cloneElement('foxybdr-tmpl-input-text');
 
-            if (this.value !== null)
-                this.#textInputElement.value = String(this.value);
-
-            this.#oldValue = this.#textInputElement.value;
-
             this.controlElement.querySelector('.foxybdr-control-input').appendChild(this.#textInputElement);
 
-            this.registerEvent(this.#textInputElement, 'keydown');
-            this.registerEvent(this.#textInputElement, 'keyup');
-            this.registerEvent(this.#textInputElement, 'keypress');
-            this.registerEvent(this.#textInputElement, 'change');
+            this.registerEvent(this.#textInputElement, 'input');
+
+            let dv = this.getDisplayValue();
+
+            this.onDisplayValueChanged(dv.displayValue, dv.defaultValue);
         }
 
         handleEvent(e)
         {
-            let newValue = this.#textInputElement.value;
+            if (e.type === 'input' && e.currentTarget === this.#textInputElement)
+            {
+                let newValue = this.#textInputElement.value;
 
-            if (newValue === this.#oldValue)
-                return;
+                this.setDisplayValue(newValue !== '' ? newValue : null);
+            }
 
-            this.#oldValue = newValue;
+            super.handleEvent(e);
+        }
 
-            this.onChanged(newValue !== '' ? newValue : null);
+        onDisplayValueChanged(displayValue, defaultValue)
+        {
+            this.#textInputElement.value = String(displayValue !== null ? displayValue : '');
+            this.#textInputElement.placeholder = String(defaultValue !== null ? defaultValue : '');
         }
 
         destroy()

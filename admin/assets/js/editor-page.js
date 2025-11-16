@@ -21,6 +21,67 @@ FoxyApp.Class.ElementCache = class
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// EVENT CLASSES
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+FoxyApp.Class.Event = {};
+
+FoxyApp.Class.Event.Model = {};
+
+FoxyApp.Class.Event.Model.Template = {};
+
+FoxyApp.Class.Event.Model.Component = {};
+
+FoxyApp.Class.Event.Model.Settings = {};
+
+FoxyApp.Class.Event.Model.Selection = class
+{
+    type = [ 'Model', 'Selection' ];
+};
+
+FoxyApp.Class.Event.Model.Device = class
+{
+    type = [ 'Model', 'Device' ];
+
+    constructor() {}
+};
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// COMMAND CLASSES
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+FoxyApp.Class.Command = {};
+
+FoxyApp.Class.Command.Model = {};
+
+FoxyApp.Class.Command.Model.Template = {};
+
+FoxyApp.Class.Command.Model.Component = {};
+
+FoxyApp.Class.Command.Model.Settings = {};
+
+FoxyApp.Class.Command.Model.Selection = class
+{
+    type = [ 'Model', 'Selection' ];
+};
+
+FoxyApp.Class.Command.Model.Device = class
+{
+    type = [ 'Model', 'Device' ];
+
+    deviceMode = '';  // 'desktop', 'tablet', 'mobile'
+
+    constructor(deviceMode)
+    {
+        this.deviceMode = deviceMode;
+    }
+};
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MODEL CLASSES
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -97,7 +158,7 @@ FoxyApp.Class.Model.WidgetInstance = class extends FoxyApp.Class.Model.Node
 
         delete FoxyApp.Model.widgetInstanceMap[this.data.id];
     }
-}
+};
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -248,7 +309,8 @@ FoxyApp.Class.UI.Component.LineResizer = class extends FoxyApp.Class.UI.Componen
         }
         else if (e.type === 'dragstart' && e.currentTarget.tagName.toLowerCase() === 'body')
         {
-            e.preventDefault();
+            if (e.target.draggable === false)
+                e.preventDefault();
         }
         else if (e.type === 'click' && e.button === 0 && e.currentTarget === this.#resizerButtonElement)
         {
@@ -337,6 +399,8 @@ FoxyApp.Class.UI.Component.PanelModule.BaseModule = class extends FoxyApp.Class.
         panelBodyElement.appendChild(this.#moduleElement);
     }
 
+    handleEvent(e) {}
+
     getModuleElement()
     {
         return this.#moduleElement;
@@ -373,6 +437,8 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule = class extends FoxyApp.Cl
     constructor()
     {
         super('foxybdr-tmpl-settings-module');
+
+        FoxyApp.Manager.modelManager.addEventListener('Device', this);
     }
 
     create()
@@ -389,7 +455,16 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule = class extends FoxyApp.Cl
 
     handleEvent(e)
     {
-        if (e.currentTarget === this.#tabsElement && e.type === 'wheel')
+        if (e instanceof FoxyApp.Class.Event.Model.Device)
+        {
+            let evt = {
+                type: 'device-change'
+            };
+
+            for (let tab of this.#tabs)
+                tab.handleEvent(evt);
+        }
+        else if (e.type === 'wheel' && e.currentTarget === this.#tabsElement)
         {
             e.preventDefault();
 
@@ -543,7 +618,7 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Tab = class extends FoxyAp
 
     handleEvent(e)
     {
-        if (e.currentTarget === this.#tabElement && e.type === 'click' && e.button === 0)
+        if (e.type === 'click' && e.button === 0 && e.currentTarget === this.#tabElement)
         {
             this.sendEvent({
                 type: 'tab-click',
@@ -557,6 +632,11 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Tab = class extends FoxyAp
         else if (e.type === 'setting-change')
         {
             this.sendEvent(e);
+        }
+        else if (e.type === 'device-change')
+        {
+            for (let section of this.#sections)
+                section.handleEvent(e);
         }
     }
 
@@ -658,7 +738,15 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Tab_Section = class extend
 
     handleEvent(e)
     {
-        if (e.currentTargetType !== undefined && e.currentTargetType === 'control' && e.type === 'change')
+        if (e.type === 'click' && e.button === 0 && e.currentTarget.classList.contains('foxybdr-header'))
+        {
+            this.sendEvent({
+                type: 'section-click',
+                index: this.#sectionIndex,
+                show: !this.#sectionElement.classList.contains('foxybdr-active')
+            });
+        }
+        else if (e.type === 'control-change')
         {
             this.sendEvent({
                 type: 'setting-change',
@@ -666,13 +754,10 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Tab_Section = class extend
                 value: e.value
             });
         }
-        else if (e.currentTarget.classList.contains('foxybdr-header') && e.type === 'click' && e.button === 0)
+        else if (e.type === 'device-change')
         {
-            this.sendEvent({
-                type: 'section-click',
-                index: this.#sectionIndex,
-                show: !this.#sectionElement.classList.contains('foxybdr-active')
-            });
+            for (let control of this.#controls)
+                control.handleEvent(e);
         }
     }
 
@@ -701,6 +786,159 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Tab_Section = class extend
     }
 };
 
+FoxyApp.Class.UI.Component.PanelModule.WidgetsModule = class extends FoxyApp.Class.UI.Component.PanelModule.BaseModule
+{
+    #headerElement = null;
+    #bodyElement = null;
+
+    #categories = [];
+
+    constructor()
+    {
+        super('foxybdr-tmpl-widgets-module');
+    }
+
+    create()
+    {
+        super.create();
+
+        let moduleElement = this.getModuleElement();
+
+        this.#headerElement = moduleElement.querySelector('.foxybdr-header');
+        this.#bodyElement = moduleElement.querySelector('.foxybdr-body');
+
+        for (let categoryData of FoxyApp.Model.widgetCategories)
+        {
+            let category = new FoxyApp.Class.UI.Component.PanelModule.WidgetsModule_Category(categoryData);
+            category.create(this.#bodyElement);
+            this.#categories.push(category);
+        }
+    }
+
+    destroy()
+    {
+        super.destroy();
+
+        for (let category of this.#categories)
+            category.destroy();
+
+        this.#categories = [];
+
+        this.#headerElement = null;
+        this.#bodyElement = null;
+    }
+};
+
+FoxyApp.Class.UI.Component.PanelModule.WidgetsModule_Category = class extends FoxyApp.Class.UI.Component.BaseComponent
+{
+    #categoryElement = null;
+
+    #cards = [];
+
+    #categoryData = null;
+
+    constructor(categoryData)
+    {
+        super();
+
+        this.#categoryData = categoryData;
+    }
+
+    create(parentElement)
+    {
+        this.#categoryElement = FoxyApp.elementCache.cloneElement('foxybdr-tmpl-widgets-module-category');
+        parentElement.appendChild(this.#categoryElement);
+
+        this.registerEvent(this.#categoryElement.querySelector('.foxybdr-header'), 'click');
+
+        this.#categoryElement.classList.add('foxybdr-active');
+        this.#categoryElement.querySelector('.foxybdr-title').innerText = this.#categoryData.title;
+
+        let bodyElement = this.#categoryElement.querySelector('.foxybdr-body');
+
+        for (let widgetName of this.#categoryData.widgets)
+        {
+            let widgetData = FoxyApp.Model.widgets[widgetName];
+
+            let card = new FoxyApp.Class.UI.Component.PanelModule.WidgetsModule_Category_Card(widgetName, widgetData);
+            card.create(bodyElement);
+            this.#cards.push(card);
+        }
+    }
+
+    handleEvent(e)
+    {
+        if (e.type === 'click' && e.button === 0 && e.currentTarget.classList.contains('foxybdr-header'))
+        {
+            this.#categoryElement.classList.toggle('foxybdr-active');
+        }
+    }
+
+    destroy()
+    {
+        super.destroy();
+
+        for (let card of this.#cards)
+            card.destroy();
+
+        this.#cards = [];
+
+        if (this.#categoryElement)
+        {
+            this.#categoryElement.remove();
+            this.#categoryElement = null;
+        }
+    }
+};
+
+FoxyApp.Class.UI.Component.PanelModule.WidgetsModule_Category_Card = class extends FoxyApp.Class.UI.Component.BaseComponent
+{
+    #cardElement = null;
+
+    #widgetName = '';
+    #widgetData = null;
+
+    constructor(widgetName, widgetData)
+    {
+        super();
+
+        this.#widgetName = widgetName;
+        this.#widgetData = widgetData;
+    }
+
+    create(parentElement)
+    {
+        this.#cardElement = FoxyApp.elementCache.cloneElement('foxybdr-tmpl-widgets-module-card');
+        parentElement.appendChild(this.#cardElement);
+
+        this.registerEvent(this.#cardElement, 'dragstart');
+
+        this.#cardElement.querySelector('i').className = this.#widgetData.icon;
+        this.#cardElement.querySelector('span').innerText = this.#widgetData.title;
+    }
+
+    handleEvent(e)
+    {
+        if (e.type === 'dragstart' && e.currentTarget === this.#cardElement)
+        {
+            e.dataTransfer.setData("text/plain", this.#widgetName);
+
+            e.dataTransfer.effectAllowed = "move";
+        }
+    }
+
+    destroy()
+    {
+        super.destroy();
+
+        if (this.#cardElement)
+        {
+            this.#cardElement.remove();
+            this.#cardElement = null;
+        }
+    }
+};
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MANAGER CLASSES
@@ -708,6 +946,84 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Tab_Section = class extend
 
 
 FoxyApp.Class.Manager = {};
+
+FoxyApp.Class.Manager.ModelManager = class
+{
+    #eventListeners = {};
+
+    constructor()
+    {
+        for (let modelName of Object.keys(FoxyApp.Class.Event.Model))
+            this.#eventListeners[modelName] = [];
+    }
+
+    /*
+     * Method addEventListener.
+     * Listener classes must have a method named "handleEvent" with two parameters for: (1) event object, (2) command object.
+     * The command object contains the original command submitted by the submitter, in case the listener is interested in
+     * specific details leading up to the event. The event object contains only generic information about the event, such as,
+     * for example, the ID of the widget instance that has changed. It is the responsibility of the listener to look up full
+     * information of the widget instance in FoxyApp.Model.*.
+     */
+    addEventListener(modelName, listener)
+    {
+        this.#eventListeners[modelName].push(listener);
+    }
+
+    /*
+     * Method submitCommand.
+     * Anyone can submit a command to change any model in FoxyApp.Model.*. Interested event listeners will get events that
+     * correspond to any changes made to FoxyApp.Model.*. If the 'submitter' argument is non-null, the submitter will not
+     * receive any event resulting from this command, even if the submitter is a registered event listener to any event
+     * types resulting from this command.
+     */
+    submitCommand(submitter, command)
+    {
+        if (command.type[0] !== 'Model')
+            return;
+
+        let events;
+
+        switch (command.type[1])
+        {
+            case 'Device':
+                events = this.#processCommand_device(command);
+                break;
+        }
+
+        if (events !== undefined)
+        {
+            for (let event of events)
+            {
+                if (event.type[0] !== 'Model')
+                    continue;
+    
+                for (let listener of this.#eventListeners[event.type[1]])
+                {
+                    if (listener === submitter)
+                        continue;
+    
+                    listener.handleEvent(event, command);
+                }
+            }
+        }
+    }
+
+    #processCommand_device(command)
+    {
+        if (command instanceof FoxyApp.Class.Command.Model.Device)
+        {
+            FoxyApp.Model.device.deviceMode = command.deviceMode;
+
+            return [ new FoxyApp.Class.Event.Model.Device() ];
+        }
+    }
+
+    destroy()
+    {
+        this.#eventListeners = {};
+    }
+};
 
 FoxyApp.Class.Manager.PanelManager = class extends FoxyApp.Class.UI.Component.BaseComponent
 {
@@ -782,13 +1098,6 @@ FoxyApp.Class.View.PanelModule.SiteSettingsModule = class extends FoxyApp.Class.
         super();
     }
 
-    activate(show)
-    {
-        super.activate(show);
-
-        return 'Site Settings';
-    }
-
     create()
     {
         super.create();
@@ -796,6 +1105,102 @@ FoxyApp.Class.View.PanelModule.SiteSettingsModule = class extends FoxyApp.Class.
         FoxyApp.Manager.panelManager.registerPanelModule(this, 'foxybdr-toolbar-btn-site-settings');
 
         this.load('S', null, 'S-siteSettings');
+    }
+
+    activate(show)
+    {
+        super.activate(show);
+
+        return 'Site Settings';
+    }
+};
+
+FoxyApp.Class.View.PanelModule.WidgetsModule = class extends FoxyApp.Class.UI.Component.PanelModule.WidgetsModule
+{
+    constructor()
+    {
+        super();
+    }
+
+    create()
+    {
+        super.create();
+
+        FoxyApp.Manager.panelManager.registerPanelModule(this, 'foxybdr-widgets-button');
+    }
+
+    activate(show)
+    {
+        super.activate(show);
+
+        return 'Insert Widget';
+    }
+}
+
+FoxyApp.Class.View.Device = class extends FoxyApp.Class.UI.Component.BaseComponent
+{
+    #buttons = {};
+
+    constructor()
+    {
+        super();
+
+        FoxyApp.Manager.modelManager.addEventListener('Device', this);
+    }
+
+    create()
+    {
+        this.#buttons = {
+            desktop: document.querySelector('.foxybdr-device-btn.foxybdr-device-desktop'),
+            tablet:  document.querySelector('.foxybdr-device-btn.foxybdr-device-tablet'),
+            mobile:  document.querySelector('.foxybdr-device-btn.foxybdr-device-mobile')
+        };
+
+        for (let buttonName in this.#buttons)
+            this.registerEvent(this.#buttons[buttonName], 'click');
+
+        this.#buttons[FoxyApp.Model.device.deviceMode].classList.add('foxybdr-active');
+    }
+
+    handleEvent(e)
+    {
+        if (e.type === 'click' && e.button === 0 && e.currentTarget.classList.contains('foxybdr-device-btn'))
+        {
+            let buttonActivated = null;
+
+            for (let buttonName in this.#buttons)
+            {
+                let buttonElement = this.#buttons[buttonName];
+
+                if (buttonElement === e.currentTarget)
+                {
+                    if (!buttonElement.classList.contains('foxybdr-active'))
+                    {
+                        buttonElement.classList.add('foxybdr-active');
+
+                        buttonActivated = buttonName;
+                    }
+                }
+                else
+                {
+                    buttonElement.classList.remove('foxybdr-active');
+                }
+            }
+
+            if (buttonActivated !== null)
+            {
+                let command = new FoxyApp.Class.Command.Model.Device(buttonActivated);
+
+                FoxyApp.Manager.modelManager.submitCommand(this, command);
+            }
+        }
+    }
+
+    destroy()
+    {
+        super.destroy();
+
+        this.#buttons = {};
     }
 };
 
@@ -813,17 +1218,24 @@ FoxyApp.UI.drawerResizer = null;
 
 FoxyApp.Model = {};
 FoxyApp.Model.widgetInstanceMap = {};  // Key: Widget instance ID. Value: Pointer to widget instance object.
+FoxyApp.Model.widgetCategories = null;
 FoxyApp.Model.widgets = null;
 FoxyApp.Model.Settings = {};
 FoxyApp.Model.Settings.siteSettings = null;
 FoxyApp.Model.Settings.templateSettings = null;
+FoxyApp.Model.device = {
+    deviceMode: '',  // 'desktop', 'tablet', 'mobile'
+};
 
 FoxyApp.Manager = {};
+FoxyApp.Manager.modelManager = null;
 FoxyApp.Manager.panelManager = null;
 
 FoxyApp.View = {};
 FoxyApp.View.PanelModule = {};
 FoxyApp.View.PanelModule.siteSettingsModule = null;
+FoxyApp.View.PanelModule.widgetsModule = null;
+FoxyApp.View.device = null;
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -845,6 +1257,7 @@ FoxyApp.Main = class
         FoxyApp.UI.drawerResizer = new FoxyApp.Class.UI.Component.DrawerResizer();
         FoxyApp.UI.drawerResizer.create();
 
+        FoxyApp.Model.widgetCategories = FOXYAPP.widgetCategories;
         FoxyApp.Model.widgets = FOXYAPP.widgets;
 
         FoxyApp.Model.Settings.siteSettings = new FoxyApp.Class.Model.WidgetInstance({
@@ -854,11 +1267,19 @@ FoxyApp.Main = class
             sparseSettings: {}
         });
         FoxyApp.Model.Settings.templateSettings;
+        FoxyApp.Model.device.deviceMode = 'desktop';
 
+        FoxyApp.Manager.modelManager = new FoxyApp.Class.Manager.ModelManager();
         FoxyApp.Manager.panelManager = new FoxyApp.Class.Manager.PanelManager();
 
         FoxyApp.View.PanelModule.siteSettingsModule = new FoxyApp.Class.View.PanelModule.SiteSettingsModule();
         FoxyApp.View.PanelModule.siteSettingsModule.create();
+
+        FoxyApp.View.PanelModule.widgetsModule = new FoxyApp.Class.View.PanelModule.WidgetsModule();
+        FoxyApp.View.PanelModule.widgetsModule.create();
+
+        FoxyApp.View.device = new FoxyApp.Class.View.Device();
+        FoxyApp.View.device.create();
     }
 };
 

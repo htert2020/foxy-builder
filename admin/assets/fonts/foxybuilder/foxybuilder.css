@@ -1,8 +1,8 @@
 @font-face {
     font-family: "foxybuilder";
-    src: url("./foxybuilder.eot?ca257c18bbb5b39fc50bdd4fd26142c6#iefix") format("embedded-opentype"),
-url("./foxybuilder.woff2?ca257c18bbb5b39fc50bdd4fd26142c6") format("woff2"),
-url("./foxybuilder.woff?ca257c18bbb5b39fc50bdd4fd26142c6") format("woff");
+    src: url("./foxybuilder.eot?52dc07571125f48e6d3cc409ed0fc839#iefix") format("embedded-opentype"),
+url("./foxybuilder.woff2?52dc07571125f48e6d3cc409ed0fc839") format("woff2"),
+url("./foxybuilder.woff?52dc07571125f48e6d3cc409ed0fc839") format("woff");
 }
 
 i[class^="foxybdr-"]:before, i[class*=" foxybdr-"]:before {
@@ -16,15 +16,18 @@ i[class^="foxybdr-"]:before, i[class*=" foxybdr-"]:before {
     -moz-osx-font-smoothing: grayscale;
 }
 
-.foxybdr-logo:before {
+.foxybdr-fa-section:before {
     content: "\f101";
 }
-.foxybdr-logocircle:before {
+.foxybdr-logo:before {
     content: "\f102";
 }
-.foxybdr-nav-house:before {
+.foxybdr-logocircle:before {
     content: "\f103";
 }
-.foxybdr-nav-key:before {
+.foxybdr-nav-house:before {
     content: "\f104";
+}
+.foxybdr-nav-key:before {
+    content: "\f105";
 }

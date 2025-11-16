@@ -8,10 +8,12 @@ body {  /* CONFIGURABLE CSS VARIABLES */
 	--foxybdr-general-t-color: #c0c0c0;
 	--foxybdr-input-bg-color: #383838;
 	--foxybdr-input-t-color: #c0c0c0;
+	--foxybdr-input-p-color: #808080;
 	--foxybdr-popup-bg-color: #383838;
 	--foxybdr-popup-t-color: #c0c0c0;
 	--foxybdr-popup-input-bg-color: #505050;
 	--foxybdr-popup-input-t-color: #c0c0c0;
+	--foxybdr-popup-input-p-color: #808080;
 	--foxybdr-resizer-width: 8px;
 	--foxybdr-resizer-bg-color: #505050;
 	--foxybdr-resizer-button-t-color: #c0c0c0;
@@ -69,7 +71,8 @@ input:focus {
 				transition: all linear 0.2s;
 			}
 
-			#foxybdr-editor-toolbar > div > div:hover {
+			#foxybdr-editor-toolbar > div > div:hover,
+			#foxybdr-editor-toolbar > div > div.foxybdr-active {
 				background-color: var(--foxybdr-popup-input-bg-color);
 				color: #ffffff;
 			}
@@ -409,6 +412,121 @@ input:focus {
 					height: 0px;
 					padding: 0px;
 				}
+
+.foxybdr-widgets-module {
+	position: absolute;
+	left: 0px;
+	top: 0px;
+	width: 100%;
+	height: 100%;
+	display: flex;
+	flex-direction: column;
+	--foxybdr-top-height: 0px;
+}
+
+	.foxybdr-widgets-module > .foxybdr-header {
+		height: var(--foxybdr-top-height);
+	}
+
+	.foxybdr-widgets-module > .foxybdr-body {
+		height: calc(100% - var(--foxybdr-top-height));
+		display: flex;
+		flex-direction: column;
+		gap: 0px;
+		background-color: var(--foxybdr-general-bg-color);
+		overflow-y: auto;
+		scroll-behavior: smooth;
+		scrollbar-color: #80808040 #ffffff20;
+	}
+
+		.foxybdr-widgets-module .foxybdr-category {
+			border-style: solid;
+			border-color: var(--foxybdr-general-br-color);
+			border-width: 1px 1px 0px 1px;
+			user-select: none;
+		}
+
+		.foxybdr-widgets-module .foxybdr-category:last-child {
+			border-bottom-width: 1px;
+		}
+
+			.foxybdr-widgets-module .foxybdr-category > .foxybdr-header {
+				display: flex;
+				align-items: center;
+				gap: 4px;
+				padding: 16px 16px 16px 8px;
+				color: var(--foxybdr-popup-input-t-color);
+				cursor: pointer;
+			}
+
+			.foxybdr-widgets-module .foxybdr-category > .foxybdr-header:hover {
+				background-color: var(--foxybdr-general-br-color);
+			}
+
+				.foxybdr-widgets-module .foxybdr-category > .foxybdr-header > span {
+					color: #ffffff;
+					font-size: 14px;
+					font-weight: bold;
+					line-height: 1.0;
+				}
+
+				.foxybdr-widgets-module .foxybdr-category > .foxybdr-header > span.dashicons {
+					font-size: 20px;
+					font-weight: normal;
+				}
+
+				.foxybdr-widgets-module .foxybdr-category.foxybdr-active > .foxybdr-header > .dashicons-arrow-right {
+					display: none;
+				}
+
+				.foxybdr-widgets-module .foxybdr-category:not(.foxybdr-active) > .foxybdr-header > .dashicons-arrow-down {
+					display: none;
+				}
+
+			.foxybdr-widgets-module .foxybdr-category > .foxybdr-body {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+				gap: 8px;
+				padding: 8px;
+				overflow-y: clip;
+				transition: all linear 0.2s;
+			}
+
+			.foxybdr-widgets-module .foxybdr-category:not(.foxybdr-active) > .foxybdr-body {
+				height: 0px;
+				padding: 0px;
+			}
+
+				.foxybdr-widgets-module .foxybdr-card {
+					display: flex;
+					flex-direction: column;
+					align-items: center;
+					gap: 16px;
+					border: 1px solid var(--foxybdr-general-br-color);
+					border-radius: 4px;
+					padding: 16px;
+					color: var(--foxybdr-general-t-color);
+					cursor: move;
+					transition: all linear 0.2s;
+				}
+
+				.foxybdr-widgets-module .foxybdr-card:hover {
+					border-color: #ffffff;
+					background-color: var(--foxybdr-general-br-color);
+					color: #ffffff;
+				}
+
+					.foxybdr-widgets-module .foxybdr-card > i {
+						font-size: 28px;
+						line-height: 1.0;
+					}
+
+					.foxybdr-widgets-module .foxybdr-card > span {
+						font-family: var(--foxybdr-general-font);
+						font-size: 12px;
+						font-weight: normal;
+						line-height: 1.0;
+					}
 
 /* BEGIN TINYMCE WYSIWYG **************************************************************/
 
