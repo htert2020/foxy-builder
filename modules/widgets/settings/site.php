@@ -39,6 +39,11 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
         return [];
     }
 
+    public function get_render_js_file_path()
+    {
+        return null;
+    }
+
     protected function declare_tabs()
     {
         $this->tabs = [

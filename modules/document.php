@@ -39,7 +39,7 @@ class Document
     {
         $post_type = $this->post['post_type'];
 
-        if ($post_type === 'foxybdr_template' || $post_type === 'page')
+        if (in_array($post_type, [ 'post', 'page', 'foxybdr_template' ]))
         {
             $value = get_post_meta($this->post['ID'], $key, true);
 
@@ -53,7 +53,7 @@ class Document
     {
         $post_type = $this->post['post_type'];
 
-        if ($post_type === 'foxybdr_template' || $post_type === 'page')
+        if (in_array($post_type, [ 'post', 'page', 'foxybdr_template' ]))
         {
             update_post_meta($this->post['ID'], $key, $value !== null ? $value : '');
         }
@@ -96,6 +96,14 @@ class Document
         return admin_url("post.php?post={$id}&action=foxy_builder");
     }
 
+    public function post_type($newValue = null)
+    {
+        if ($newValue === null)
+            return $this->post['post_type'];
+
+        $this->post['post_type'] = $newValue;
+    }
+
     public function edit_mode($newValue = null)
     {
         if ($newValue === null)
@@ -104,11 +112,35 @@ class Document
         $this->meta['_foxybdr_edit_mode'] = $newValue ? 'yes' : 'no';
     }
 
-    public function post_type($newValue = null)
+    public function render($as_post_content = false)
     {
-        if ($newValue === null)
-            return $this->post['post_type'];
+        $id = $this->post['ID'];
+        $post_type = $this->post['post_type'];
 
-        $this->post['post_type'] = $newValue;
+        $class_list = [ 'foxybdr-template' ];
+        if ($as_post_content === true)
+            $class_list[] = 'foxybdr-post-content';
+
+        ob_start();
+
+        ?><div class="<?php echo esc_attr(implode(' ', $class_list)); ?>" foxybdr-post-id="<?php echo esc_attr($id); ?>" foxybdr-post-type="<?php echo esc_attr($post_type); ?>"><?php
+
+            $widget_instances = $this->meta['_foxybdr_widget_instances'];
+
+            if (!empty($widget_instances))
+            {
+                $widget_instances = json_decode($widget_instances, true);
+
+                foreach ($widget_instances as $widget_instance)
+                {
+                    // TODO: Render $widget_instance
+                }
+            }
+
+        ?></div><?php
+
+        $content = ob_get_clean();
+
+        return $content;
     }
 }

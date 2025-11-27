@@ -31,6 +31,22 @@ FoxyApp.Class.Event.Model = {};
 
 FoxyApp.Class.Event.Model.Template = {};
 
+    FoxyApp.Class.Event.Model.Template.Insert = class
+    {
+        type = [ 'Model', 'Template', 'Insert' ];
+
+        widgetInstance = null;
+        targetID = null;
+        insertBefore = null;
+
+        constructor(widgetInstance, targetID, insertBefore)
+        {
+            this.widgetInstance = widgetInstance;
+            this.targetID = targetID;
+            this.insertBefore = insertBefore;
+        }
+    };
+
 FoxyApp.Class.Event.Model.Component = {};
 
 FoxyApp.Class.Event.Model.Settings = {};
@@ -59,6 +75,22 @@ FoxyApp.Class.Command.Model = {};
 
 FoxyApp.Class.Command.Model.Template = {};
 
+    FoxyApp.Class.Command.Model.Template.Insert = class
+    {
+        type = [ 'Model', 'Template', 'Insert' ];
+
+        wInstanceData = null;
+        targetID = null;
+        insertBefore = null;
+
+        constructor(wInstanceData, targetID, insertBefore)
+        {
+            this.wInstanceData = wInstanceData;
+            this.targetID = targetID;
+            this.insertBefore = insertBefore;
+        }
+    };
+
 FoxyApp.Class.Command.Model.Component = {};
 
 FoxyApp.Class.Command.Model.Settings = {};
@@ -82,13 +114,11 @@ FoxyApp.Class.Command.Model.Device = class
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MODEL CLASSES
+// NODE CLASS
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-FoxyApp.Class.Model = {};
-
-FoxyApp.Class.Model.Node = class
+FoxyApp.Class.Node = class
 {
     parentNode = null;
     children = [];
@@ -123,6 +153,61 @@ FoxyApp.Class.Model.Node = class
             this.parentNode.removeChild(this);
     }
 
+    get nextSibling()
+    {
+        if (this.parentNode === null)
+            return null;
+
+        let children = this.parentNode.children;
+
+        let index = children.indexOf(this);
+
+        return index >= 0 && index < children.length - 1 ? children[index + 1] : null;
+    }
+
+    get previousSibling()
+    {
+        if (this.parentNode === null)
+            return null;
+
+        let children = this.parentNode.children;
+
+        let index = children.indexOf(this);
+
+        return index > 0 ? children[index - 1] : null;
+    }
+
+    insertBefore(newNode, referenceNode)
+    {
+        if (referenceNode === null)
+        {
+            this.children.push(newNode);
+        }
+        else
+        {
+            let index = this.children.indexOf(referenceNode);
+
+            if (index >= 0)
+                this.children.splice(index, 0, newNode);
+        }
+    }
+
+    static insertIntoIndexedTree(rootNode, nodeMap, newNode, targetID, insertBefore)
+    {
+        if (insertBefore === null)
+        {
+            let parentNode = targetID === null ? rootNode : nodeMap[targetID];
+
+            parentNode.appendChild(newNode);
+        }
+        else
+        {
+            let targetNode = nodeMap[targetID];
+
+            targetNode.parentNode.insertBefore(newNode, insertBefore ? targetNode : targetNode.nextSibling);
+        }
+    }
+
     destroy()
     {
         this.remove();
@@ -134,7 +219,94 @@ FoxyApp.Class.Model.Node = class
     }
 };
 
-FoxyApp.Class.Model.WidgetInstance = class extends FoxyApp.Class.Model.Node
+
+FoxyApp.Class.ElementNode = class extends FoxyApp.Class.Node
+{
+    element = null;
+    containerElement = null;
+
+    /* constructor: The "containerElement" is a descendant of "element". It contains all the elements of all direct child ElementNodes.
+     * A null "containerElement" means the ElementNode cannot take any children. */
+    constructor(element, containerElement)
+    {
+        super();
+        
+        this.element = element;
+        this.containerElement = containerElement;
+    }
+
+    appendChild(childNode)
+    {
+        if (this.containerElement === null)
+            return;
+
+        super.appendChild(childNode);
+
+        this.containerElement.appendChild(childNode.element);
+    }
+
+    removeChild(childNode)
+    {
+        if (this.containerElement === null)
+            return;
+
+        this.containerElement.removeChild(childNode.element);
+
+        super.removeChild(childNode);
+    }
+
+    insertBefore(newNode, referenceNode)
+    {
+        if (this.containerElement === null)
+            return;
+
+        super.insertBefore(newNode, referenceNode);
+
+        this.containerElement.insertBefore(newNode.element, referenceNode.element);
+    }
+
+    setElement(newElement, newContainerElement)
+    {
+        if (this.parentNode)
+        {
+            this.parentNode.containerElement.insertBefore(newElement, this.element);
+            this.parentNode.containerElement.removeChild(this.element);
+        }
+
+        this.element = newElement;
+
+        for (let childNode of [ ...this.children ])
+        {
+            if (newContainerElement !== null)
+                newContainerElement.appendChild(childNode.element);
+            else
+            {
+                this.removeChild(childNode);
+                childNode.destroy();
+            }
+        }
+
+        this.containerElement = newContainerElement;
+    }
+
+    destroy()
+    {
+        super.destroy();
+
+        this.containerElement = null;
+        this.element = null;
+    }
+};
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// MODEL CLASSES
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+FoxyApp.Class.Model = {};
+
+FoxyApp.Class.Model.WidgetInstance = class extends FoxyApp.Class.Node
 {
     data = {
         id: '',  // e.g. T-1234-5678901234567.
@@ -150,6 +322,24 @@ FoxyApp.Class.Model.WidgetInstance = class extends FoxyApp.Class.Model.Node
         this.data = data;
 
         FoxyApp.Model.widgetInstanceMap[this.data.id] = this;
+    }
+
+    static createTree(data)
+    {
+        let children = data.children !== undefined ? data.children : [];
+
+        if (data.children !== undefined)
+            delete data.children;
+
+        let widgetInstance = new FoxyApp.Class.Model.WidgetInstance(data);
+
+        for (let child of children)
+        {
+            let childNode = FoxyApp.Class.Model.WidgetInstance.createTree(child);
+            widgetInstance.appendChild(childNode);
+        }
+
+        return widgetInstance;
     }
 
     destroy()
@@ -278,6 +468,7 @@ FoxyApp.Class.UI.Component.LineResizer = class extends FoxyApp.Class.UI.Componen
         this.registerEvent(this.#resizerButtonElement, 'click');
         this.registerEvent(document.body, 'mousemove');
         this.registerEvent(document.body, 'mouseup');
+        this.registerEvent(document.body, 'mouseleave');
         this.registerEvent(document.body, 'dragstart');
     }
 
@@ -289,6 +480,9 @@ FoxyApp.Class.UI.Component.LineResizer = class extends FoxyApp.Class.UI.Componen
             this.#originalState.x = e.clientX;
             this.#originalState.y = e.clientY;
             this.#originalState.elementSize = this.#horizontalDirection ? this.#targetElement.offsetWidth : this.#targetElement.offsetHeight;
+
+            // Block preview iframe in order to capture mouse move events over the iframe.
+            document.querySelector('#foxybdr-editor-screen').classList.add('foxybdr-line-resize-mode');
         }
         else if (e.type === 'mousemove' && this.#isDragging)
         {
@@ -303,9 +497,11 @@ FoxyApp.Class.UI.Component.LineResizer = class extends FoxyApp.Class.UI.Componen
 
             this.#isHidden = false;
         }
-        else if (e.type === 'mouseup' && this.#isDragging)
+        else if ((e.type === 'mouseup' || e.type === 'mouseleave') && this.#isDragging)
         {
             this.#isDragging = false;
+
+            document.querySelector('#foxybdr-editor-screen').classList.remove('foxybdr-line-resize-mode');
         }
         else if (e.type === 'dragstart' && e.currentTarget.tagName.toLowerCase() === 'body')
         {
@@ -912,7 +1108,9 @@ FoxyApp.Class.UI.Component.PanelModule.WidgetsModule_Category_Card = class exten
         parentElement.appendChild(this.#cardElement);
 
         this.registerEvent(this.#cardElement, 'dragstart');
+        this.registerEvent(this.#cardElement, 'dragend');
 
+        this.#cardElement.setAttribute('foxybdr-widget-name', this.#widgetName);
         this.#cardElement.querySelector('i').className = this.#widgetData.icon;
         this.#cardElement.querySelector('span').innerText = this.#widgetData.title;
     }
@@ -924,6 +1122,12 @@ FoxyApp.Class.UI.Component.PanelModule.WidgetsModule_Category_Card = class exten
             e.dataTransfer.setData("text/plain", this.#widgetName);
 
             e.dataTransfer.effectAllowed = "move";
+
+            FoxyApp.Class.UI.ElementDragDrop.setSourceElement(this.#cardElement);
+        }
+        else if (e.type === 'dragend' && e.currentTarget === this.#cardElement)
+        {
+            FoxyApp.Class.UI.ElementDragDrop.setSourceElement(null);
         }
     }
 
@@ -936,6 +1140,467 @@ FoxyApp.Class.UI.Component.PanelModule.WidgetsModule_Category_Card = class exten
             this.#cardElement.remove();
             this.#cardElement = null;
         }
+    }
+};
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// UI CLASSES
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+/* Class ElementDragDrop: This class handles drag-drop events for the placement of DOM elements within a hierarchical element tree. The class
+ * can be used for the insertion of new elements into the tree and the movement of elements to new locations within the tree. It does not
+ * actually insert or move elements, but notifies listeners of what element the user has dropped and the exact location in the tree where
+ * the drop has occurred. It is the responsibility of the listener to do the actual insertion or movement of elements within the tree.
+ * This class only handles the visual special effect of the drag-drop operation as experienced by the user.
+ */
+FoxyApp.Class.UI.ElementDragDrop = class extends FoxyApp.Class.UI.Component.BaseComponent
+{
+    /* sourceElement: The element being dragged by the user. */
+    static sourceElement = null;
+
+    /* instances: Array of all instantiated objects of this class. */
+    static instances = [];
+
+    /* scopeElement: The root element within which all drag-drop events will be monitored by this class object. */
+    #scopeElement = null;
+
+    /* scrollElement: The scrollable element or window that contains the element tree. It will scroll when the user drags near an edge of
+     * the "scrollElement". This can be either the window object or some <div> element with the CSS 'overflow' property set to 'auto'. */
+    #scrollElement = null;
+    #scrollThreshold = 0.0;
+    #scrollThresholdUnits = 'px';  // 'px' or '%'
+    #scrollElementIsWindow = false;
+
+    /* state: Contains stateful information about a drag-drop operation currently in progress. Since multiple 'dragover' events are fired
+     * during a single drag-drop operation, there is a need to track the drag-drop operation across these multiple 'dragover' events. */
+    #state = {
+
+        /* targetElement: This is the current best neighboring element around which the new element will be inserted or moved into. This
+         * can be either the parent or sibling of the new element, depending on the value of "insertBefore". If "insertBefore" is null,
+         * then "targetElement" is the parent element of the new element. If "insertBefore" is true, then "targetElement" is the next
+         * sibling of the new element. If "insertBefore" is false, then "targetElement" is the previous sibling of the new element. */
+        targetElement: null,
+
+        /* insertBefore: See previous note for semantic meaning of "insertBefore". */
+        insertBefore: null,
+
+        /* insertElement: This is a temporary rectangular element that serves as a visual indicator of where the new element will be
+         * inserted or moved. It appears while the mouse is dragging and disappears when a 'drop' event occurs. */
+        insertElement: null,
+
+        /* lastMouseX and lastMouseY: These keep track of the mouse coordinates of the previous 'dragover' event. They are used to decide
+         * the distance by which to scroll the page when the drag approaches the top or bottom of the page. */
+        lastMouseX: null,
+        lastMouseY: null
+    };
+
+    /* sourceTypes: Array of objects that each define a type of source element and the range of possible drop targets for that type of
+     * source element. For example, column widgets can only be dropped into section widgets and cannot be dropped into other column
+     * widgets. Source element types and ranges of possible drop targets are defined by CSS selector strings. */
+    #sourceTypes = [];
+
+    constructor()
+    {
+        super();
+
+        FoxyApp.Class.UI.ElementDragDrop.instances.push(this);
+    }
+
+    create(scopeElement, scrollElement, scrollThreshold, scrollThresholdUnits)
+    {
+        this.#scopeElement = scopeElement;
+
+        this.#scrollElement = scrollElement;
+        this.#scrollThreshold = scrollThreshold;
+        this.#scrollThresholdUnits = scrollThresholdUnits;
+        this.#scrollElementIsWindow = this.#scrollElement.innerWidth !== undefined && this.#scrollElement.innerHeight !== undefined && this.#scrollElement.scrollBy !== undefined;
+
+        this.registerEvent(this.#scopeElement, 'dragover');
+        this.registerEvent(this.#scopeElement, 'dragleave');
+        this.registerEvent(this.#scopeElement, 'drop');
+
+        this.registerEvent(this.#scopeElement, 'dragstart');
+        this.registerEvent(this.#scopeElement, 'dragend');
+    }
+
+    /* addSourceType: "sourceSelector" is required. If "parentSelector" is null, then the "#scopeElement" will be selected as parent.
+     * "forbiddenSelector" can be null. */
+    addSourceType(sourceSelector, parentSelector, forbiddenSelector)
+    {
+        this.#sourceTypes.push({
+            sourceSelector: sourceSelector,
+            parentSelector: parentSelector,
+            forbiddenSelector: forbiddenSelector
+        });
+    }
+
+    static setSourceElement(sourceElement)
+    {
+        FoxyApp.Class.UI.ElementDragDrop.sourceElement = sourceElement;
+
+        for (let instance of FoxyApp.Class.UI.ElementDragDrop.instances)
+        {
+            instance.handleEvent({
+                type: 'source-element-change',
+                sourceElement: sourceElement
+            });
+        }
+    }
+
+    handleEvent(e)
+    {
+        if (e.type === 'source-element-change')
+        {
+            if (e.sourceElement === null)
+                this.#destroyInsertElement();
+        }
+        else if (e.currentTarget === this.#scopeElement)
+        {
+            switch (e.type)
+            {
+                case 'dragover': this.#onDragOver(e); break;
+                case 'dragleave': this.#onDragOver(e); break;
+                case 'drop': this.#onDrop(e); break;
+                case 'dragstart': this.#onDragStart(e); break;
+                case 'dragend': this.#onDragEnd(e); break;
+            }
+        }
+    }
+
+    #onDragOver(e)
+    {
+        let sourceElement = FoxyApp.Class.UI.ElementDragDrop.sourceElement;
+
+        if (sourceElement === null)
+            return;
+
+        let sourceTypeFound = false;
+        let parentSelector = null;
+        let forbiddenSelector = null;
+
+        for (let sourceType of this.#sourceTypes)
+        {
+            if (sourceElement.matches(sourceType.sourceSelector))
+            {
+                sourceTypeFound = true;
+                parentSelector = sourceType.parentSelector;
+                forbiddenSelector = sourceType.forbiddenSelector;
+                break;
+            }
+        }
+
+        if (!sourceTypeFound)
+            return;
+
+        // allow the drag operation
+        e.preventDefault();
+
+        this.#scrollIfNeeded(e);
+
+        if (this.#state.insertElement !== null)
+        {
+            let rect = this.#state.insertElement.getBoundingClientRect();
+            if (this.#doesRectContain(rect, e.clientX, e.clientY))
+                return;
+        }
+    
+        let parentElement = this.#findBestParentElement(parentSelector, forbiddenSelector, e.clientX, e.clientY);
+
+        if (parentElement === null)
+        {
+            this.#destroyInsertElement();
+            return;
+        }
+
+        let targetElement = null;
+        let insertBefore = null;
+
+        // Goal: Determine targetElement and insertBefore.
+        {
+            let sides = [];
+
+            for (let i = 0; i < parentElement.children.length; i++)
+            {
+                let childElement = parentElement.children[i];
+
+                if (childElement.classList.contains('foxybdr-drag-drop-insert'))
+                    continue;
+
+                let rect = childElement.getBoundingClientRect();
+
+                if (this.#doesRectContain(rect, e.clientX, e.clientY))
+                {
+                    targetElement = childElement;
+                    insertBefore = e.clientY < (rect.top + rect.bottom) / 2;
+                    sides = [];
+                    break;
+                }
+                else
+                {
+                    sides.push({ x: (rect.left + rect.right) / 2, y: rect.top, targetElement: childElement, insertBefore: true });  // top border
+                    sides.push({ x: (rect.left + rect.right) / 2, y: rect.bottom, targetElement: childElement, insertBefore: false });  // bottom border
+                }
+            }
+
+            let closestDist = null;
+
+            for (let side of sides)
+            {
+                let dist = Math.sqrt(Math.pow(side.x - e.clientX, 2) + Math.pow(side.y - e.clientY, 2));
+
+                if (closestDist === null || dist < closestDist)
+                {
+                    closestDist = dist;
+                    targetElement = side.targetElement;
+                    insertBefore = side.insertBefore;
+                }
+            }
+
+            if (targetElement === null)
+            {
+                targetElement = parentElement;
+                insertBefore = null;
+            }
+        }
+
+        let sameAsBefore = targetElement === this.#state.targetElement && insertBefore === this.#state.insertBefore;
+
+        if (this.#state.targetElement !== null)
+        {
+            if (this.#state.insertBefore === true)
+            {
+                let previousSibling = this.#state.targetElement.previousSibling;
+                if (previousSibling !== null && previousSibling.classList.contains('foxybdr-drag-drop-insert'))
+                    previousSibling = previousSibling.previousSibling;
+
+                if (previousSibling === targetElement && insertBefore === false)
+                    sameAsBefore = true;
+            }
+            else if (this.#state.insertBefore === false)
+            {
+                let nextSibling = this.#state.targetElement.nextSibling;
+                if (nextSibling !== null && nextSibling.classList.contains('foxybdr-drag-drop-insert'))
+                    nextSibling = nextSibling.nextSibling;
+
+                if (nextSibling === targetElement && insertBefore === true)
+                    sameAsBefore = true;
+            }
+        }
+
+        if (sameAsBefore === true && this.#state.insertElement !== null)
+            return;
+
+        this.#destroyInsertElement();
+
+        let insertElement = FoxyApp.elementCache.cloneElement('foxybdr-tmpl-drag-drop-insert');
+
+        if (insertBefore === null)
+            targetElement.appendChild(insertElement);
+        else
+            targetElement.parentElement.insertBefore(insertElement, insertBefore ? targetElement : targetElement.nextSibling);
+
+        setTimeout(function() {
+            insertElement.classList.add('foxybdr-show');
+        }, 10);
+
+        this.#state.targetElement = targetElement;
+        this.#state.insertBefore = insertBefore;
+        this.#state.insertElement = insertElement;
+    }
+
+    #onDrop(e)
+    {
+        if (this.#state.insertElement)
+        {
+            this.#state.insertElement.remove();
+    
+            e.preventDefault();
+
+            this.sendEvent({
+                type: 'element-drop',
+                sourceElement: FoxyApp.Class.UI.ElementDragDrop.sourceElement,
+                targetElement: this.#state.targetElement,
+                insertBefore: this.#state.insertBefore
+            });
+
+            this.#state.targetElement = null;
+            this.#state.insertBefore = null;
+            this.#state.insertElement = null;
+            this.#state.lastMouseX = null;
+            this.#state.lastMouseY = null;
+        }
+    }
+
+    #onDragStart(e)
+    {
+
+    }
+
+    #onDragEnd(e)
+    {
+
+    }
+
+    #scrollIfNeeded(e)
+    {
+        if (this.#state.lastMouseX !== null && this.#state.lastMouseY !== null)
+        {
+            let scrollRect = this.#scrollElementIsWindow ? new DOMRect(0, 0, this.#scrollElement.innerWidth, this.#scrollElement.innerHeight) : this.#scrollElement.getBoundingClientRect();
+
+            if (this.#doesRectContain(scrollRect, e.clientX, e.clientY))
+            {
+                let thresholdX = this.#scrollThreshold;
+                let thresholdY = this.#scrollThreshold;
+                if (this.#scrollThresholdUnits === '%')
+                {
+                    thresholdX *= 0.01 * scrollRect.width;
+                    thresholdY *= 0.01 * scrollRect.height;
+                }
+
+                let scrollX = null;
+                let scrollY = null;
+
+                if (e.clientX < scrollRect.left + thresholdX)
+                    scrollX = -Math.abs(this.#state.lastMouseY - e.clientY);
+                else if (e.clientX > scrollRect.right - thresholdX)
+                    scrollX = Math.abs(this.#state.lastMouseY - e.clientY);
+
+                if (e.clientY < scrollRect.top + thresholdY)
+                    scrollY = -Math.abs(this.#state.lastMouseX - e.clientX);
+                else if (e.clientY > scrollRect.bottom - thresholdY)
+                    scrollY = Math.abs(this.#state.lastMouseX - e.clientX);
+
+                if (scrollX !== null || scrollY !== null)
+                {
+                    const growthFactor = 2.0;
+                    scrollX = Number(scrollX) * growthFactor;
+                    scrollY = Number(scrollY) * growthFactor;
+
+                    this.#scrollBy(scrollX, scrollY);
+                }
+            }
+        }
+
+        this.#state.lastMouseX = e.clientX;
+        this.#state.lastMouseY = e.clientY;
+    }
+
+    #scrollBy(scrollX, scrollY)
+    {
+        if (this.#scrollElementIsWindow)
+        {
+            this.#scrollElement.scrollBy({ left: scrollX, top: scrollY, behavior: 'smooth' });
+        }
+        else
+        {
+            let scrollLeft = this.#scrollElement.scrollLeft + scrollX;
+            let scrollRangeX = this.#scrollElement.scrollWidth - this.#scrollElement.clientWidth;
+            if (scrollLeft < 0)
+                scrollLeft = 0;
+            if (scrollLeft > scrollRangeX)
+                scrollLeft = scrollRangeX;
+            this.#scrollElement.scrollLeft = scrollLeft;
+
+            let scrollTop = this.#scrollElement.scrollTop + scrollY;
+            let scrollRangeY = this.#scrollElement.scrollHeight - this.#scrollElement.clientHeight;
+            if (scrollTop < 0)
+                scrollTop = 0;
+            if (scrollTop > scrollRangeY)
+                scrollTop = scrollRangeY;
+            this.#scrollElement.scrollTop = scrollTop;
+        }
+    }
+
+    #findBestParentElement(parentSelector, forbiddenSelector, mouseX, mouseY)
+    {
+        let elements;
+
+        if (parentSelector === null)
+            elements = [ this.#scopeElement ];
+        else
+            elements = this.#scopeElement.querySelectorAll(parentSelector);
+    
+        let parentElements = [];
+    
+        for (let i = 0; i < elements.length; i++)
+        {
+            if (forbiddenSelector)
+            {
+                let forbiddenElement = elements[i].closest(forbiddenSelector);
+
+                if (forbiddenElement !== null && forbiddenElement !== this.#scopeElement && this.#scopeElement.contains(forbiddenElement))
+                    continue;
+            }
+
+            parentElements.push(elements[i]);
+        }
+    
+        let bestParentElement = null;
+    
+        for (let parentElement of parentElements)
+        {
+            let rect = parentElement.getBoundingClientRect();
+    
+            if (this.#doesRectContain(rect, mouseX, mouseY) === false)
+                continue;
+    
+            if (bestParentElement === null || bestParentElement.contains(parentElement))
+                bestParentElement = parentElement;
+        }
+    
+        return bestParentElement;
+    }
+    
+    #doesRectContain(rect, x, y)
+    {
+        return (rect.left <= x && x <= rect.right &&
+                rect.top  <= y && y <= rect.bottom);
+    }
+
+    #destroyInsertElement()
+    {
+        if (this.#state.insertElement)
+        {
+            let insertElement = this.#state.insertElement;
+
+            if (insertElement.classList.contains('foxybdr-show'))
+            {
+                insertElement.classList.remove('foxybdr-show');
+
+                setTimeout(function() {
+                    insertElement.remove();
+                }, 200);
+            }
+            else
+            {
+                insertElement.remove();
+            }
+    
+            this.#state.targetElement = null;
+            this.#state.insertBefore = null;
+            this.#state.insertElement = null;
+        }
+    }
+    
+    destroy()
+    {
+        super.destroy();
+
+        this.#destroyInsertElement();
+
+        this.#scopeElement = null;
+        this.#scrollElement = null;
+        this.#state = null;
+
+        let newInstanceList = [];
+        for (let instance of FoxyApp.Class.UI.ElementDragDrop.instances)
+        {
+            if (instance !== this)
+                newInstanceList.push(instance);
+        }
+        FoxyApp.Class.UI.ElementDragDrop.instances = newInstanceList;
     }
 };
 
@@ -989,6 +1654,10 @@ FoxyApp.Class.Manager.ModelManager = class
             case 'Device':
                 events = this.#processCommand_device(command);
                 break;
+
+            case 'Template':
+                events = this.#processCommand_template(command);
+                break;
         }
 
         if (events !== undefined)
@@ -1016,6 +1685,22 @@ FoxyApp.Class.Manager.ModelManager = class
             FoxyApp.Model.device.deviceMode = command.deviceMode;
 
             return [ new FoxyApp.Class.Event.Model.Device() ];
+        }
+    }
+
+    #processCommand_template(command)
+    {
+        switch (command.type[2])
+        {
+            case 'Insert':
+
+                let widgetInstance = FoxyApp.Class.Model.WidgetInstance.createTree(command.wInstanceData);
+
+                FoxyApp.Class.Node.insertIntoIndexedTree(FoxyApp.Model.widgetInstanceTree, FoxyApp.Model.widgetInstanceMap, widgetInstance, command.targetID, command.insertBefore);
+
+                return [ new FoxyApp.Class.Event.Model.Template.Insert(widgetInstance, command.targetID, command.insertBefore) ];
+
+                break;
         }
     }
 
@@ -1137,6 +1822,442 @@ FoxyApp.Class.View.PanelModule.WidgetsModule = class extends FoxyApp.Class.UI.Co
     }
 }
 
+FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseComponent
+{
+    #iFrameElement = null;
+    #templateElement = null;
+
+    #dragDropProcessor = null;
+
+    #canvasNodeTree = null;
+    #canvasNodeMap = {};
+
+    constructor()
+    {
+        super();
+
+        FoxyApp.Manager.modelManager.addEventListener('Template', this);
+    }
+
+    create()
+    {
+        this.#iFrameElement = document.querySelector('#foxybdr-preview-iframe');
+
+        this.#iFrameElement.contentDocument.addEventListener('readystatechange', this);
+
+        if ([ 'interactive', 'complete' ].includes(this.#iFrameElement.contentDocument.readyState))
+            this.onPreviewLoaded();
+    }
+
+    onPreviewLoaded()
+    {
+        this.#iFrameElement.contentDocument.removeEventListener('readystatechange', this);
+
+        if (this.#templateElement === null)
+            this.#templateElement = this.#iFrameElement.contentDocument.querySelector(`.foxybdr-template.foxybdr-post-content`);
+
+        if (this.#dragDropProcessor === null)
+        {
+            this.#dragDropProcessor = new FoxyApp.Class.UI.ElementDragDrop();
+            this.#dragDropProcessor.create(this.#templateElement, this.#iFrameElement.contentWindow, 8.0, '%');
+            this.#dragDropProcessor.addSourceType('.foxybdr-widget-card[foxybdr-widget-name="foxybdr.layout.section"]', null, '.foxybdr-template');
+            this.#dragDropProcessor.addEventListener(this);
+        }
+
+        this.#canvasNodeTree = new FoxyApp.Class.ElementNode(this.#templateElement, this.#templateElement);
+    }
+
+    handleEvent(e)
+    {
+        if (e instanceof FoxyApp.Class.Event.Model.Template.Insert)
+        {
+            this.insertWidgetInstance(e.widgetInstance, e.targetID, e.insertBefore);
+        }
+        else if (e.type === 'readystatechange' && [ 'interactive', 'complete' ].includes(e.target.readyState))
+        {
+            this.onPreviewLoaded();
+        }
+        else if (e.type === 'element-drop' && e.currentTarget === this.#dragDropProcessor)
+        {
+            if (e.sourceElement.classList.contains('foxybdr-widget-card'))
+            {
+                let wInstanceID = this.generateWidgetInstanceID();
+                let widgetID = e.sourceElement.getAttribute('foxybdr-widget-name');
+
+                let wInstanceData = {
+                    id: wInstanceID,
+                    widgetType: 0,
+                    widgetID: widgetID,
+                    sparseSettings: {}
+                };
+
+                let targetID = e.targetElement === this.#templateElement ? null : e.targetElement.closest('.foxybdr-widget').getAttribute('foxybdr-instance-id');
+
+                let command = new FoxyApp.Class.Command.Model.Template.Insert(wInstanceData, targetID, e.insertBefore);
+
+                FoxyApp.Manager.modelManager.submitCommand(null, command);
+            }
+        }
+    }
+
+    generateWidgetInstanceID()
+    {
+        let templateID = FoxyApp.templateID;
+        let timestamp = Date.now();
+        return `T-${templateID}-${timestamp}`;
+    }
+
+    insertWidgetInstance(widgetInstance, targetID, insertBefore)
+    {
+        if (insertBefore === null)
+        {
+            if (targetID === null)
+            {
+                let context = {};
+                let canvasNode = new FoxyApp.Class.View.Canvas_Node(widgetInstance.data.id, context, this.#canvasNodeMap);
+                canvasNode.render(true);
+
+                this.#canvasNodeTree.appendChild(canvasNode);
+            }
+            else
+            {
+                let parentNodes = this.#canvasNodeMap[targetID];
+
+                for (let parentNode of [ ...parentNodes ])
+                {
+                    if (parentNode.parentNode === null)
+                        continue;
+
+                    if (parentNode.hasQuery())
+                    {
+                        /* The parent node has a query loop, so we cannot simply copy the context from the parent node. The query loop alters the context.
+                         * The simplest thing to do is re-render the parent node and all of its children, so that new contexts can be generated for its
+                         * children, including the new node being inserted. Also, there may be multiple copies of the new node needed, since this is a
+                         * query loop. */
+                        parentNode.render(true);
+                    }
+                    else
+                    {
+                        /* The parent node does not have a query loop. There is only one copy of the new node needed. Just append the new node to the parent
+                         * node, and copy the parent node's context to the new node. */
+                        let context = parentNode.isComponent() ? parentNode.generateComponentContext() : parentNode.context;
+                        let canvasNode = new FoxyApp.Class.View.Canvas_Node(widgetInstance.data.id, context, this.#canvasNodeMap);
+                        canvasNode.render(true);
+        
+                        parentNode.appendChild(canvasNode);
+                    }
+                }
+            }
+        }
+        else
+        {
+            let targetNodes = this.#canvasNodeMap[targetID];
+
+            for (let targetNode of [ ...targetNodes ])
+            {
+                let parentNode = targetNode.parentNode;
+
+                if (parentNode === null)  // Is targetNode still in the tree? Make sure it hasn't been destroyed from previous iterations of this 'for' loop.
+                    continue;
+
+                if (parentNode === this.#canvasNodeTree)
+                {
+                    let context = {};
+                    let canvasNode = new FoxyApp.Class.View.Canvas_Node(widgetInstance.data.id, context, this.#canvasNodeMap);
+                    canvasNode.render(true);
+
+                    this.#canvasNodeTree.insertBefore(canvasNode, insertBefore ? targetNode : targetNode.nextSibling);
+                }
+                else if (parentNode.hasQuery())
+                {
+                    /* The parent node has a query loop, so we cannot simply copy the context from the parent node. The query loop alters the context.
+                     * The simplest thing to do is re-render the parent node and all of its children, so that new contexts can be generated for its
+                     * children, including the new node being inserted. Also, there may be multiple copies of the new node needed, since this is a
+                     * query loop. */
+                    parentNode.render(true);
+                }
+                else
+                {
+                    /* The parent node does not have a query loop. There is only one copy of the new node needed. Just insert the new node to the parent
+                     * node, and copy the parent node's context to the new node. */
+                    let context = parentNode.isComponent() ? parentNode.generateComponentContext() : parentNode.context;
+                    let canvasNode = new FoxyApp.Class.View.Canvas_Node(widgetInstance.data.id, context, this.#canvasNodeMap);
+                    canvasNode.render(true);
+
+                    parentNode.insertBefore(canvasNode, insertBefore ? targetNode : targetNode.nextSibling);
+                }
+            }
+        }
+    }
+
+    destroy()
+    {
+        super.destroy();
+
+        this.#iFrameElement = null;
+        this.#templateElement = null;
+
+        if (this.#dragDropProcessor !== null)
+        {
+            this.#dragDropProcessor.destroy();
+            this.#dragDropProcessor = null;
+        }
+
+        if (this.#canvasNodeTree !== null)
+        {
+            this.#canvasNodeTree.destroy();
+            this.#canvasNodeTree = null;
+        }
+
+        this.#canvasNodeMap = {};
+    }
+};
+
+FoxyApp.Class.View.Canvas_Node = class extends FoxyApp.Class.ElementNode
+{
+    wInstanceID = '';
+    context = null;
+    #nodeMap = null;
+
+    constructor(wInstanceID, context, nodeMap)
+    {
+        super(null, null);
+
+        this.wInstanceID = wInstanceID;
+        this.context = context;
+        this.#nodeMap = nodeMap;
+
+        if (this.#nodeMap[this.wInstanceID] === undefined)
+            this.#nodeMap[this.wInstanceID] = [];
+
+        this.#nodeMap[this.wInstanceID].push(this);
+    }
+
+    render(deep)
+    {
+        let widgetInstance = FoxyApp.Model.widgetInstanceMap[this.wInstanceID];
+
+        if (widgetInstance.data.widgetType === 1)  // 1=component
+        {
+            this.renderComponent(deep);
+            return;
+        }
+
+        // widgetInstance.data.widgetType === 0  // 0=widget
+
+        let widgetID = widgetInstance.data.widgetID;
+
+        let widget = FoxyApp.Model.widgets[widgetID];
+
+        let eSettings = FoxyApp.Class.View.Canvas_SettingsProcessor.evaluateContextualSettingsForRender(this.context, widgetInstance.data.sparseSettings, widget.settings);
+
+        let renderFunction = FoxyRender.renderFunctions[widgetID];
+
+        let renderStr = renderFunction(this.wInstanceID, eSettings);
+
+        let wInstanceElement = document.createElement('div');
+        wInstanceElement.classList.add('foxybdr-widget');
+        wInstanceElement.setAttribute('foxybdr-widget-type', widgetID);
+        wInstanceElement.setAttribute('foxybdr-instance-id', this.wInstanceID);
+
+        let widgetContainerElement = document.createElement('div');
+        widgetContainerElement.classList.add('foxybdr-widget-container');
+        widgetContainerElement.innerHTML = renderStr;
+        wInstanceElement.appendChild(widgetContainerElement);
+
+        let childContainerElement = null;
+
+        if (widget.container === true)
+        {
+            childContainerElement = widgetContainerElement.querySelector('.foxybdr-child-container');
+
+            if (childContainerElement === null && widgetContainerElement.children.length === 0)
+                childContainerElement = widgetContainerElement;
+        }
+
+        if (deep === true && widget.container === true && childContainerElement !== null)
+        {
+            let newChildNodes = [];
+
+            if (this.hasQuery())
+            {
+                let postObjects = this.runQuery();
+
+                for (let postObject of postObjects)
+                {
+                    // TODO: Add postObject to cloned copy of this.context
+                    let childContext = { ...this.context };
+
+                    for (let childWidgetInstance of widgetInstance.children)
+                    {
+                        let newChildNode = new FoxyApp.Class.View.Canvas_Node(childWidgetInstance.data.id, childContext, this.#nodeMap);
+                        newChildNode.render(deep);
+                        newChildNodes.push(newChildNode);
+                    }
+                }
+            }
+            else
+            {
+                for (let childWidgetInstance of widgetInstance.children)
+                {
+                    let newChildNode = new FoxyApp.Class.View.Canvas_Node(childWidgetInstance.data.id, this.context, this.#nodeMap);
+                    newChildNode.render(deep);
+                    newChildNodes.push(newChildNode);
+                }
+            }
+
+            for (let oldChildNode of [ ...this.children ])
+            {
+                this.removeChild(oldChildNode);
+                oldChildNode.destroy();
+            }
+
+            this.setElement(wInstanceElement, childContainerElement);
+
+            for (let newChildNode of newChildNodes)
+                this.appendChild(newChildNode);
+        }
+        else
+        {
+            this.setElement(wInstanceElement, childContainerElement);
+        }
+    }
+
+    renderComponent(deep)
+    {
+        //this.generateComponentContext();
+    }
+
+    hasQuery()
+    {
+        return false;
+    }
+
+    runQuery()
+    {
+        return [];
+    }
+
+    isComponent()
+    {
+        return false;
+    }
+
+    generateComponentContext()
+    {
+        return this.context;
+    }
+
+    destroy()
+    {
+        super.destroy();
+
+        let index = this.#nodeMap[this.wInstanceID].indexOf(this);
+        this.#nodeMap[this.wInstanceID].splice(index, 1);
+
+        if (this.#nodeMap[this.wInstanceID].length === 0)
+            delete this.#nodeMap[this.wInstanceID];
+
+        this.#nodeMap = null;
+    }
+};
+
+FoxyApp.Class.View.Canvas_SettingsProcessor = class
+{
+    static evaluateContextualSettingsForRender(context, sparseSettings, widgetSettings)
+    {
+        let contextualSparseSettings = FoxyApp.Class.View.Canvas_SettingsProcessor.applyContextToSettings(context, sparseSettings);
+
+        let eSettings = FoxyApp.Class.View.Canvas_SettingsProcessor.evaluateSettingsForRender(contextualSparseSettings, widgetSettings);
+
+        return eSettings;
+    }
+
+    static applyContextToSettings(context, sparseSettings)
+    {
+        // TODO: Apply loop context and component context to sparse settings from widget instance.
+        // sparseSettings must not be modified. If modification of setting values is necessary, return a new cloned copy of sparseSettings.
+
+        return sparseSettings;
+    }
+
+    static evaluateSettingsForRender(sparseSettings, wSettings)
+    {
+        let eSettings = {};
+
+        for (let settingName of Object.keys(wSettings))
+        {
+            let settingParams = wSettings[settingName];
+
+            switch (settingParams.type)
+            {
+                case 'GROUP':
+                    break;
+
+                case 'REPEATER':
+                    break;
+
+                default:
+
+                    let resp = FoxyApp.Class.View.Canvas_SettingsProcessor.evaluateValue(sparseSettings[settingName], settingParams);
+
+                    eSettings[`${settingName}`] = resp.desktop;
+
+                    if (resp.tablet !== undefined)
+                        eSettings[`${settingName}_tablet`] = resp.tablet;
+
+                    if (resp.mobile !== undefined)
+                        eSettings[`${settingName}_mobile`] = resp.mobile;
+
+                    break;
+            }
+        }
+
+        return eSettings;
+    }
+
+    static evaluateValue(sparseValue, settingParams)
+    {
+        if (settingParams.responsive)
+        {
+            let controlDefaultValue = FoxyControls.controlDefaultValues[settingParams.type];
+
+            let resp = {
+                desktop: controlDefaultValue,
+                tablet: controlDefaultValue,
+                mobile: controlDefaultValue
+            };
+
+            if (sparseValue !== undefined)
+            {
+                if (sparseValue.mobile !== undefined)
+                    resp.mobile = sparseValue.mobile;
+
+                if (sparseValue.tablet !== undefined)
+                    resp.tablet = sparseValue.tablet;
+            }
+
+            if (sparseValue !== undefined && sparseValue.desktop !== undefined)
+                resp.desktop = sparseValue.desktop;
+            else if (settingParams.default !== undefined)
+                resp.desktop = settingParams.default;
+
+            return resp;
+        }
+        else
+        {
+            let finalValue = FoxyControls.controlDefaultValues[settingParams.type];
+
+            if (sparseValue !== undefined)
+                finalValue = sparseValue;
+            else if (settingParams.default !== undefined)
+                finalValue = settingParams.default;
+
+            return { desktop: finalValue };
+        }
+    }
+};
+
 FoxyApp.Class.View.Device = class extends FoxyApp.Class.UI.Component.BaseComponent
 {
     #buttons = {};
@@ -1210,6 +2331,7 @@ FoxyApp.Class.View.Device = class extends FoxyApp.Class.UI.Component.BaseCompone
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
+FoxyApp.templateID = -1;
 FoxyApp.elementCache = null;
 
 FoxyApp.UI = {};
@@ -1218,6 +2340,7 @@ FoxyApp.UI.drawerResizer = null;
 
 FoxyApp.Model = {};
 FoxyApp.Model.widgetInstanceMap = {};  // Key: Widget instance ID. Value: Pointer to widget instance object.
+FoxyApp.Model.widgetInstanceTree = null;
 FoxyApp.Model.widgetCategories = null;
 FoxyApp.Model.widgets = null;
 FoxyApp.Model.Settings = {};
@@ -1235,6 +2358,7 @@ FoxyApp.View = {};
 FoxyApp.View.PanelModule = {};
 FoxyApp.View.PanelModule.siteSettingsModule = null;
 FoxyApp.View.PanelModule.widgetsModule = null;
+FoxyApp.View.canvas = null;
 FoxyApp.View.device = null;
 
 
@@ -1249,6 +2373,7 @@ FoxyApp.Main = class
     {
         FoxyControls.load();
 
+        FoxyApp.templateID = FOXYAPP.templateID;
         FoxyApp.elementCache = new FoxyApp.Class.ElementCache();
 
         FoxyApp.UI.panelResizer = new FoxyApp.Class.UI.Component.PanelResizer();
@@ -1256,6 +2381,8 @@ FoxyApp.Main = class
 
         FoxyApp.UI.drawerResizer = new FoxyApp.Class.UI.Component.DrawerResizer();
         FoxyApp.UI.drawerResizer.create();
+
+        FoxyApp.Model.widgetInstanceTree = new FoxyApp.Class.Node();
 
         FoxyApp.Model.widgetCategories = FOXYAPP.widgetCategories;
         FoxyApp.Model.widgets = FOXYAPP.widgets;
@@ -1277,6 +2404,9 @@ FoxyApp.Main = class
 
         FoxyApp.View.PanelModule.widgetsModule = new FoxyApp.Class.View.PanelModule.WidgetsModule();
         FoxyApp.View.PanelModule.widgetsModule.create();
+
+        FoxyApp.View.canvas = new FoxyApp.Class.View.Canvas();
+        FoxyApp.View.canvas.create();
 
         FoxyApp.View.device = new FoxyApp.Class.View.Device();
         FoxyApp.View.device.create();

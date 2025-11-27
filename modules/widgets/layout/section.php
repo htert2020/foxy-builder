@@ -29,6 +29,16 @@ class Section extends \FoxyBuilder\Modules\Widgets\BaseWidget
         return [ 'layout' ];
     }
 
+    public function get_render_js_file_path()
+    {
+        return FOXYBUILDER_PLUGIN_PATH . '/admin/assets/js/widgets/layout/section.js';
+    }
+
+    protected function is_child_container()
+    {
+        return true;
+    }
+
     protected function _register_controls()
     {
         $this->start_controls_section(

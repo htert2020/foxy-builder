@@ -11,6 +11,10 @@ require_once FOXYBUILDER_PLUGIN_PATH . '/modules/asset-manager.php';
 
 class Editor
 {
+    private $categories = null;
+
+    private $widgets = null;
+
     private static $_instance = null;
     
     public static function instance()
@@ -31,9 +35,15 @@ class Editor
     {
         add_action('admin_action_foxy_builder', [ $this, 'action_foxy_builder' ]);
 
-        \FoxyBuilder\Modules\WidgetManager::instance()->add_category('layout', 'Layout');
+        $widget_manager = \FoxyBuilder\Modules\WidgetManager::instance();
 
-        \FoxyBuilder\Modules\WidgetManager::instance()->add_widgets();
+        $widget_manager->add_category('layout', 'Layout');
+
+        $widget_manager->add_widgets();
+
+        $this->categories = $widget_manager->build_category_definitions();
+
+        $this->widgets = $widget_manager->build_widget_definitions();
     }
 
     public function action_foxy_builder()
@@ -71,19 +81,20 @@ class Editor
 
         remove_all_actions('after_wp_tiny_mce');
 
-        add_action('wp_enqueue_scripts', [ $this, 'enqueue' ], 999999);
+        add_action('wp_enqueue_scripts', [ $this, 'action_enqueue_scripts' ], 999999);
+
+        add_action('wp_footer', [ $this, 'action_footer' ]);
 
         require FOXYBUILDER_PLUGIN_PATH . '/admin/editor/editor-page.php';
         
         die;
     }
 
-    public function enqueue()
+    public function action_enqueue_scripts()
     {
         global $wp_styles, $wp_scripts;
 
-        $categories = \FoxyBuilder\Modules\WidgetManager::instance()->build_category_definitions();
-        $widgets = \FoxyBuilder\Modules\WidgetManager::instance()->build_widget_definitions();
+        $post_id = absint($_GET['post']);
 
         $foxybuilder_icon_url = FOXYBUILDER_PLUGIN_URL . "admin/assets/fonts/foxybuilder/foxybuilder.css?ver=" . FOXYBUILDER_VERSION;
 
@@ -104,8 +115,9 @@ class Editor
 
         wp_localize_script('foxybdr-admin-editor-page', 'FOXYAPP', [
             'ajaxUrl' => admin_url('admin-ajax.php'),
-            'widgetCategories' => $categories,
-            'widgets' => $widgets,
+            'templateID' => $post_id,
+            'widgetCategories' => $this->categories,
+            'widgets' => $this->widgets,
             'assets' => [
                 'iconLibraries' => $icon_libraries,
             ],
@@ -122,5 +134,67 @@ class Editor
         wp_print_scripts([ 'wp-tinymce' ]);
     
         wp_enqueue_media();
+    }
+
+    public function action_footer()
+    {
+        ?>
+        <script type="text/javascript" id="foxybdr-tmpl-render">
+
+            var FoxyRender = {};
+
+            FoxyRender.Printer = class
+            {
+                static textSegments = [];
+
+                static clear()
+                {
+                    FoxyRender.Printer.textSegments = [];
+                }
+
+                static write(textSegment)
+                {
+                    FoxyRender.Printer.textSegments.push(textSegment);
+                }
+
+                static getOutput()
+                {
+                    return FoxyRender.Printer.textSegments.join();
+                }
+            };
+
+            FoxyRender.renderFunctions = {};
+
+        </script>
+        <?php
+
+        foreach ($this->widgets as $widgetName => $widgetDefinition)
+        {
+            if (isset($widgetDefinition['render']) && $widgetDefinition['render'] !== null)
+            {
+                ?>
+<script type="text/javascript" id="foxybdr-tmpl-render.<?php echo esc_attr($widgetName); ?>">
+
+FoxyRender.renderFunctions['<?php echo esc_html($widgetName); ?>'] = function(wInstanceID, settings) {
+
+let obj = {
+    id: wInstanceID
+};
+
+FoxyRender.Printer.clear();
+
+let print = FoxyRender.Printer.write;
+
+<?php
+    require $widgetDefinition['render'];
+?>
+
+return FoxyRender.Printer.getOutput();
+};
+
+</script>
+                <?php
+            }
+        }
     }
 }

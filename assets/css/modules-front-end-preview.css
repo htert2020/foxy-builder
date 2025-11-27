@@ -1,0 +1,26 @@
+.foxybdr-template.foxybdr-post-content {
+	min-height: 20px;
+}
+
+.foxybdr-drag-drop-insert {
+	position: relative;
+	height: 0px;
+	flex-basis: 200px;
+	flex-grow: 1;
+	flex-shrink: 1;
+	background-color: rgba(255, 0, 0, 0.25);
+	transition: height linear 0.2s;
+}
+
+.foxybdr-drag-drop-insert.foxybdr-show {
+	height: 20px;
+}
+
+	.foxybdr-drag-drop-insert canvas {
+		position: absolute;
+		left: 0px;
+		top: 0px;
+		width: 100%;
+		height: 100%;
+	}
+

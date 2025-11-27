@@ -54,8 +54,13 @@ class Main
                 \FoxyBuilder\Admin\Editor\Editor::instance()->init();
             }
         }
+        else
+        {
+            require_once FOXYBUILDER_PLUGIN_PATH . '/modules/front-end.php';
+            \FoxyBuilder\Modules\FrontEnd::instance()->init();
+        }
     }
-    
+
     private function is_compatible()
     {
         $retval = true;

@@ -217,3 +217,7 @@ FoxyControls.Class.Factory = class
         }
     }
 };
+
+FoxyControls.controlDefaultValues = {
+    'TEXT': ''
+};

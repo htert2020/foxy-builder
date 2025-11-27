@@ -1,7 +1,49 @@
 <?php
 
+namespace FoxyBuilder\Admin\Editor;
+
 if (!defined('ABSPATH'))
     exit;
+
+class ThePage
+{
+	public $post_id = -1;
+
+	public $preview_url = '';
+
+    private static $_instance = null;
+    
+    public static function instance()
+    {
+        if (self::$_instance === null)
+        {
+            self::$_instance = new self();
+        }
+
+        return self::$_instance;
+    }
+
+    public function init()
+    {
+		if (empty($_GET['post']))
+			return;
+
+        $this->post_id = absint($_GET['post']);
+
+		$preview_url = get_permalink($this->post_id);
+		$url_parts = parse_url($preview_url);
+
+		$query = isset($url_parts['query']) ? $url_parts['query'] : null;
+		if ($query)
+			$query .= "&foxybdr_preview={$this->post_id}";
+		else
+			$query  =  "foxybdr_preview={$this->post_id}";
+
+		$this->preview_url = $url_parts['scheme'] . '://' . $url_parts['host'] . (isset($url_parts['port']) && $url_parts['port'] != 80 ? ':' . (string)$url_parts['port'] : '') . $url_parts['path'] . '?' . $query;
+    }
+}
+
+ThePage::instance()->init();
 
 ?>
 
@@ -30,7 +72,9 @@ if (!defined('ABSPATH'))
 				<div class="foxybdr-device-btn foxybdr-device-tablet">
 					<span class="dashicons dashicons-tablet"></span>
 				</div>
-				<div class="foxybdr-device-btn foxybdr-device-mobile"><span class="dashicons dashicons-smartphone"></span></div>
+				<div class="foxybdr-device-btn foxybdr-device-mobile">
+					<span class="dashicons dashicons-smartphone"></span>
+				</div>
 			</div>
 			<div id="foxybdr-toolbar-right">
 				<button id="foxybdr-save-button">
@@ -54,7 +98,10 @@ if (!defined('ABSPATH'))
 					<div id="foxybdr-panel-resizer-button"><span class="dashicons dashicons-arrow-left"></span></div>
 				</div>
 				<div id="foxybdr-canvas-backplate">
-
+					<div id="foxybdr-preview-wrapper">
+						<iframe id="foxybdr-preview-iframe" src="<?php echo esc_url(ThePage::instance()->preview_url); ?>"></iframe>
+						<div class="foxybdr-iframe-cover"></div>
+					</div>
 				</div>
 			</div>
 			<div id="foxybdr-drawer-resizable-backplate">
@@ -106,9 +153,15 @@ if (!defined('ABSPATH'))
 	</script>
 
 	<script id="foxybdr-tmpl-widgets-module-card" type="text/html">
-		<div class="foxybdr-card" draggable="true">
+		<div class="foxybdr-widget-card" draggable="true">
 			<i></i>
 			<span></span>
+		</div>
+	</script>
+
+	<script id="foxybdr-tmpl-drag-drop-insert" type="text/html">
+		<div class="foxybdr-drag-drop-insert">
+			<canvas></canvas>
 		</div>
 	</script>
 

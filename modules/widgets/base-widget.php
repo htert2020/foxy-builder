@@ -15,6 +15,8 @@ abstract class BaseWidget
     
     abstract public function get_categories();
 
+    abstract public function get_render_js_file_path();
+
     abstract protected function _register_controls();
 
     abstract protected function render();
@@ -47,6 +49,10 @@ abstract class BaseWidget
 
     protected $eval_mode = false;
 
+    protected $render_js_file_path = '';
+
+    protected $is_child_container = false;
+
     protected function declare_tabs()  // Overriding this method is welcome and encouraged.
     {
         $this->tabs = [
@@ -68,10 +74,17 @@ abstract class BaseWidget
         ];
     }
 
+    protected function is_child_container()
+    {
+        return false;
+    }
+
     public function build_widget_definition()
     {
         $this->title = $this->get_title();
         $this->icon = $this->get_icon();
+        $this->render_js_file_path = $this->get_render_js_file_path();
+        $this->is_child_container = $this->is_child_container();
 
         $this->declare_tabs();
         $this->_register_controls();
@@ -81,6 +94,8 @@ abstract class BaseWidget
             'icon' => $this->icon,
             'tabs' => $this->tabs,
             'settings' => $this->settings,
+            'render' => $this->render_js_file_path,
+            'container' => $this->is_child_container,
         ];
     }
 

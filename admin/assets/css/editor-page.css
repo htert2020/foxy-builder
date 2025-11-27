@@ -221,7 +221,35 @@ input:focus {
 				position: relative;
 				width: calc(100% - var(--foxybdr-left-width) - var(--foxybdr-resizer-width));
 				z-index: 0;
+				display: flex;
+				justify-content: center;
+				user-select: none;
 			}
+
+				#foxybdr-preview-wrapper {
+					position: relative;
+					width: 100%;
+				}
+
+					#foxybdr-preview-iframe {
+						width: 100%;
+						height: 100%;
+						background-color: #ffffff;
+					}
+
+					#foxybdr-preview-wrapper .foxybdr-iframe-cover {
+						position: absolute;
+						left: 0px;
+						top: 0px;
+						width: 100%;
+						height: 100%;
+						z-index: 10;
+						display: none;
+					}
+
+					#foxybdr-editor-screen.foxybdr-line-resize-mode .foxybdr-iframe-cover {
+						display: block;
+					}
 
 		#foxybdr-drawer-resizable-backplate {
 			position: absolute;
@@ -497,7 +525,7 @@ input:focus {
 				padding: 0px;
 			}
 
-				.foxybdr-widgets-module .foxybdr-card {
+				.foxybdr-widgets-module .foxybdr-widget-card {
 					display: flex;
 					flex-direction: column;
 					align-items: center;
@@ -510,23 +538,42 @@ input:focus {
 					transition: all linear 0.2s;
 				}
 
-				.foxybdr-widgets-module .foxybdr-card:hover {
+				.foxybdr-widgets-module .foxybdr-widget-card:hover {
 					border-color: #ffffff;
 					background-color: var(--foxybdr-general-br-color);
 					color: #ffffff;
 				}
 
-					.foxybdr-widgets-module .foxybdr-card > i {
+					.foxybdr-widgets-module .foxybdr-widget-card > i {
 						font-size: 28px;
 						line-height: 1.0;
 					}
 
-					.foxybdr-widgets-module .foxybdr-card > span {
+					.foxybdr-widgets-module .foxybdr-widget-card > span {
 						font-family: var(--foxybdr-general-font);
 						font-size: 12px;
 						font-weight: normal;
 						line-height: 1.0;
 					}
+
+.foxybdr-drag-drop-insert {
+	position: relative;
+	height: 0px;
+	background-color: rgba(255, 0, 0, 0.25);
+	transition: height linear 0.2s;
+}
+
+.foxybdr-drag-drop-insert.foxybdr-show {
+	height: 10px;
+}
+
+	.foxybdr-drag-drop-insert canvas {
+		position: absolute;
+		left: 0px;
+		top: 0px;
+		width: 100%;
+		height: 100%;
+	}
 
 /* BEGIN TINYMCE WYSIWYG **************************************************************/
 
