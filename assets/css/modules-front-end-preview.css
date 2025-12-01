@@ -24,3 +24,31 @@
 		height: 100%;
 	}
 
+.foxybdr-overlay {
+	display: none;
+	position: absolute;
+	left: 0px;
+	top: 0px;
+	width: 100%;
+	height: 100%;
+	z-index: 9999;
+	border: 1px solid #ff0000;
+	pointer-events: none;
+}
+
+	.foxybdr-widget[foxybdr-widget-type="foxybdr.layout.column"] > .foxybdr-overlay,
+	.foxybdr-widget[foxybdr-widget-type="foxybdr.layout.block"] > .foxybdr-overlay {
+		border: 1px dashed #808080;
+	}
+
+	.foxybdr-widget:hover > .foxybdr-overlay {
+		display: block;
+	}
+
+	.foxybdr-widget.foxybdr-selected > .foxybdr-overlay {
+		border-width: 2px;
+		border-style: solid;
+		display: block;
+	}
+
+	

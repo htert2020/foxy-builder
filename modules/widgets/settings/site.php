@@ -187,6 +187,26 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
         );
         
         $this->end_controls_section();
+
+
+        $this->start_controls_section(
+            'defaultstyles',
+            [
+                'label' => __('Default Styles', 'foxy-builder'),
+                'tab' => self::$TAB_DEFAULT_STYLES,
+            ]
+        );
+        
+        $this->add_control(
+            'defaultstyles_min_height',
+            [
+                'label'   => __('Min Height', 'foxy-builder'),
+                'type'    => self::$CONTROL_NUMBER,
+                'default' => 0,
+            ]
+        );
+        
+        $this->end_controls_section();
     }
 
     protected function render()

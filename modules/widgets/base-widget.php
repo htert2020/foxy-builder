@@ -33,6 +33,8 @@ abstract class BaseWidget
 
     protected static $CONTROL_TEXT = 'TEXT';
 
+    protected static $CONTROL_NUMBER = 'NUMBER';
+
     protected $title = '';
 
     protected $icon = '';

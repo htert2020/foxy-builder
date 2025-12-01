@@ -59,6 +59,29 @@ class Section extends \FoxyBuilder\Modules\Widgets\BaseWidget
         );
         
         $this->end_controls_section();
+
+
+        $this->start_controls_section(
+            'style',
+            [
+                'label' => __('Style', 'foxy-builder'),
+                'tab' => self::$TAB_STYLE,
+            ]
+        );
+        
+        $this->add_responsive_control(
+            'style_min_height',
+            [
+                'label'   => __('Min Height', 'foxy-builder'),
+                'type'    => self::$CONTROL_NUMBER,
+                'default' => 0,
+                'selectors' => [
+                    '{{WRAPPER}}' => 'min-height: {{VALUE}}px',
+                ],
+            ]
+        );
+        
+        $this->end_controls_section();
     }
 
     protected function render()

@@ -185,6 +185,10 @@ ThePage::instance()->init();
 		<input type="text" class="foxybdr-input-text" value="" />
 	</script>
 
+	<script id="foxybdr-tmpl-input-number" type="text/html">
+		<input type="number" class="foxybdr-input-number" value="" />
+	</script>
+
 <?php
 
 	wp_footer();

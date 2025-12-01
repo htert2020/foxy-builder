@@ -49,66 +49,75 @@ FoxyControls.load = function()
 
                 if (this.setting.responsive)
                 {
-                    let dv = this.getDisplayValue();
+                    let d = this.getDisplayValue();
 
-                    this.onDisplayValueChanged(dv.displayValue, dv.defaultValue);
+                    this.onDisplayValueChanged(d.displayValue, d.placeholderValue);
                 }
             }
         }
 
         getDisplayValue()
         {
-            let displayValue = null;
-            let defaultValue = null;
+            let controlDefaultValue = FoxyControls.controlDefaultValues[this.setting.type];
+            let settingDefaultValue = this.setting.default !== undefined ? this.setting.default : controlDefaultValue;
+
+            let displayValue;
+            let placeholderValue = controlDefaultValue;
 
             if (this.setting.responsive)
             {
-                if (this.value !== null)
+                const devices = [ 'desktop', 'tablet', 'mobile' ];
+
+                let dv = {};  // Holds display value of each device mode.
+
+                for (let device of devices)
                 {
-                    if (this.value[this.deviceMode] !== undefined)
-                        displayValue = this.value[this.deviceMode];
+                    if (this.value !== null && this.value[device] !== undefined)
+                        dv[device] = this.value[device];
+                    else if (device === 'desktop')
+                        dv[device] = settingDefaultValue;
+                    else
+                        dv[device] = controlDefaultValue;
+                }
 
-                    const deviceToIndex = {
-                        desktop: 0,
-                        tablet:  1,
-                        mobile:  2
-                    };
+                displayValue = dv[this.deviceMode];
 
-                    const indexToDevice = [ 'desktop', 'tablet', 'mobile' ];
-
-                    for (let i = deviceToIndex[this.deviceMode] - 1; i >= 0; i--)
+                for (let i = devices.indexOf(this.deviceMode) - 1; i >= 0; i--)
+                {
+                    if (FoxyApp.Function.isValueEqual(dv[devices[i]], controlDefaultValue) === false)
                     {
-                        let v = this.value[indexToDevice[i]];
-
-                        if (v !== undefined)
-                        {
-                            defaultValue = v;
-                            break;
-                        }
+                        placeholderValue = dv[devices[i]];
+                        break;
                     }
                 }
             }
             else
             {
-                displayValue = this.value;
+                displayValue = this.value !== null ? this.value : settingDefaultValue;
             }
 
             return {
                 displayValue: displayValue,
-                defaultValue: defaultValue
+                placeholderValue: placeholderValue
             };
         }
 
         setDisplayValue(newValue)
         {
+            let controlDefaultValue = FoxyControls.controlDefaultValues[this.setting.type];
+            let settingDefaultValue = this.setting.default !== undefined ? this.setting.default : controlDefaultValue;
+
             if (this.setting.responsive)
             {
-                if (newValue !== null)
+                let defaultValue = this.deviceMode === 'desktop' ? settingDefaultValue : controlDefaultValue;
+                let _newValue = FoxyApp.Function.isValueEqual(newValue, defaultValue) ? null : newValue;
+
+                if (_newValue !== null)
                 {
                     if (this.value === null)
                         this.value = {};
 
-                    this.value[this.deviceMode] = newValue;
+                    this.value[this.deviceMode] = _newValue;
                 }
                 else
                 {
@@ -124,7 +133,7 @@ FoxyControls.load = function()
             }
             else
             {
-                this.value = newValue;
+                this.value = FoxyApp.Function.isValueEqual(newValue, settingDefaultValue) ? null : newValue;
             }
 
             this.sendEvent({
@@ -134,7 +143,7 @@ FoxyControls.load = function()
             });
         }
 
-        onDisplayValueChanged(displayValue, defaultValue) {}  // overridable
+        onDisplayValueChanged(displayValue, placeholderValue) {}  // overridable
 
         destroy()
         {
@@ -167,9 +176,9 @@ FoxyControls.load = function()
 
             this.registerEvent(this.#textInputElement, 'input');
 
-            let dv = this.getDisplayValue();
+            let d = this.getDisplayValue();
 
-            this.onDisplayValueChanged(dv.displayValue, dv.defaultValue);
+            this.onDisplayValueChanged(d.displayValue, d.placeholderValue);
         }
 
         handleEvent(e)
@@ -178,16 +187,16 @@ FoxyControls.load = function()
             {
                 let newValue = this.#textInputElement.value;
 
-                this.setDisplayValue(newValue !== '' ? newValue : null);
+                this.setDisplayValue(newValue);
             }
 
             super.handleEvent(e);
         }
 
-        onDisplayValueChanged(displayValue, defaultValue)
+        onDisplayValueChanged(displayValue, placeholderValue)
         {
-            this.#textInputElement.value = String(displayValue !== null ? displayValue : '');
-            this.#textInputElement.placeholder = String(defaultValue !== null ? defaultValue : '');
+            this.#textInputElement.value = String(displayValue);
+            this.#textInputElement.placeholder = String(placeholderValue);
         }
 
         destroy()
@@ -196,6 +205,57 @@ FoxyControls.load = function()
 
             if (this.#textInputElement)
                 this.#textInputElement = null;
+        }
+    };
+
+    FoxyControls.Class.Number = class extends FoxyControls.Class.BaseControl
+    {
+        #numberInputElement = null;
+
+        constructor(name, setting, value)
+        {
+            super(name, setting, value);
+        }
+
+        create(parentElement)
+        {
+            super.create(parentElement);
+
+            this.#numberInputElement = FoxyApp.elementCache.cloneElement('foxybdr-tmpl-input-number');
+
+            this.controlElement.querySelector('.foxybdr-control-input').appendChild(this.#numberInputElement);
+
+            this.registerEvent(this.#numberInputElement, 'input');
+
+            let d = this.getDisplayValue();
+
+            this.onDisplayValueChanged(d.displayValue, d.placeholderValue);
+        }
+
+        handleEvent(e)
+        {
+            if (e.type === 'input' && e.currentTarget === this.#numberInputElement)
+            {
+                let newValue = this.#numberInputElement.value;
+
+                this.setDisplayValue(newValue !== '' ? Number(newValue) : '');
+            }
+
+            super.handleEvent(e);
+        }
+
+        onDisplayValueChanged(displayValue, placeholderValue)
+        {
+            this.#numberInputElement.value = String(displayValue);
+            this.#numberInputElement.placeholder = String(placeholderValue);
+        }
+
+        destroy()
+        {
+            super.destroy();
+
+            if (this.#numberInputElement)
+                this.#numberInputElement = null;
         }
     };
 
@@ -214,10 +274,12 @@ FoxyControls.Class.Factory = class
         switch (controlType)
         {
             case 'TEXT': return new FoxyControls.Class.Text(name, setting, value); break;
+            case 'NUMBER': return new FoxyControls.Class.Number(name, setting, value); break;
         }
     }
 };
 
 FoxyControls.controlDefaultValues = {
-    'TEXT': ''
+    'TEXT': '',
+    'NUMBER': '',
 };

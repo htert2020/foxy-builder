@@ -55,3 +55,20 @@
 .foxybdr-input-text::placeholder {
     color: var(--foxybdr-input-p-color);
 }
+
+.foxybdr-input-number {
+    width: 64px;
+    border-width: 0px;
+    border-radius: 4px;
+    padding: 8px;
+    background-color: var(--foxybdr-input-bg-color);
+    color: var(--foxybdr-input-t-color);
+    font-family: var(--foxybdr-general-font);
+    font-size: 12px;
+    font-weight: normal;
+    line-height: 1.0;
+}
+
+.foxybdr-input-number::placeholder {
+    color: var(--foxybdr-input-p-color);
+}
