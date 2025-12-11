@@ -69,6 +69,8 @@ class FrontEnd
         if ($this->is_preview)
         {
             wp_enqueue_style('foxybdr-front-end-preview', FOXYBUILDER_PLUGIN_URL . "assets/css/modules-front-end-preview.css", [], FOXYBUILDER_VERSION);
+
+            wp_enqueue_style('dashicons');
         }
     }
 

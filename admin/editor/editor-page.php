@@ -169,12 +169,18 @@ ThePage::instance()->init();
 		<div class="foxybdr-control">
 			<div class="foxybdr-control-prompt">
 				<div>
-					<span class="foxybdr-control-label"></span>
-					<span></span>
+					<div class="foxybdr-control-label"></div>
+					<div class="foxybdr-responsive-button">
+						<span class="dashicons dashicons-desktop"></span>
+						<div class="foxybdr-responsive-dropdown">
+							<span class="dashicons dashicons-desktop"></span>
+							<span class="dashicons dashicons-tablet"></span>
+							<span class="dashicons dashicons-smartphone"></span>
+						</div>
+					</div>
 				</div>
 				<div>
-					<span></span>
-					<span></span>
+					<select class="foxybdr-unit-select"></select>
 				</div>
 			</div>
 			<div class="foxybdr-control-input"></div>
@@ -185,8 +191,62 @@ ThePage::instance()->init();
 		<input type="text" class="foxybdr-input-text" value="" />
 	</script>
 
+	<script id="foxybdr-tmpl-input-textarea" type="text/html">
+		<textarea class="foxybdr-input-textarea"></textarea>
+	</script>
+
+	<script id="foxybdr-tmpl-input-select" type="text/html">
+		<select class="foxybdr-input-select"></select>
+	</script>
+
+	<script id="foxybdr-tmpl-input-choose" type="text/html">
+		<div class="foxybdr-input-choose"></div>
+	</script>
+
+	<script id="foxybdr-tmpl-input-switcher" type="text/html">
+		<div class="foxybdr-input-switcher">
+			<div class="foxybdr-track">
+				<div class="foxybdr-label">
+					<span></span>
+				</div>
+				<div class="foxybdr-label">
+					<span></span>
+				</div>
+				<div class="foxybdr-handle"></div>
+			</div>
+		</div>
+	</script>
+
 	<script id="foxybdr-tmpl-input-number" type="text/html">
 		<input type="number" class="foxybdr-input-number" value="" />
+	</script>
+
+	<script id="foxybdr-tmpl-input-slider" type="text/html">
+		<div class="foxybdr-input-slider">
+			<div>
+				<div class="foxybdr-track">
+					<div class="foxybdr-handle"></div>
+				</div>
+			</div>
+			<div>
+				<input type="number" value="" />
+			</div>
+		</div>
+	</script>
+
+	<script id="foxybdr-tmpl-input-dimensions" type="text/html">
+		<div class="foxybdr-input-dimensions">
+			<div>
+				<div class="foxybdr-lock-button">
+					<span class="dashicons dashicons-lock"></span>
+					<span class="dashicons dashicons-unlock"></span>
+				</div>
+				<input type="number" class="foxybdr-left" value="" />
+				<input type="number" class="foxybdr-top" value="" />
+				<input type="number" class="foxybdr-right" value="" />
+				<input type="number" class="foxybdr-bottom" value="" />
+			</div>
+		</div>
 	</script>
 
 <?php

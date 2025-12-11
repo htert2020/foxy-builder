@@ -7,18 +7,21 @@
 }
 
     .foxybdr-control-prompt {
+        width: 50%;
         display: flex;
         justify-content: space-between;
-        width: 50%;
     }
 
     .foxybdr-control.foxybdr-control-multirow .foxybdr-control-prompt {
         width: 100%;
     }
 
-        .foxybdr-control-prompt > div {
+        .foxybdr-control-prompt > div:nth-child(1) {
+            z-index: 10;  /* For responsive dropdown */
             display: flex;
-            align-items: center;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 8px 0px 0px 0px;
         }
 
             .foxybdr-control-prompt > div > .foxybdr-control-label {
@@ -29,10 +32,107 @@
                 line-height: 1.0;
             }
 
-    .foxybdr-control-input {
+            .foxybdr-control-prompt > div > .foxybdr-responsive-button {
+                position: relative;
+                display: none;
+                color: var(--foxybdr-popup-input-bg-color);
+                font-size: 12px;
+                line-height: 1.0;
+            }
+
+            .foxybdr-control-prompt > div > .foxybdr-responsive-button.foxybdr-show {
+                display: block;
+            }
+
+                .foxybdr-control-prompt > div > .foxybdr-responsive-button > .dashicons {
+                    height: 12px;
+                    display: inline-block;
+                    font-size: 12px;
+                    line-height: 1.0;
+                }
+
+                .foxybdr-control-prompt > div > .foxybdr-responsive-button .foxybdr-responsive-dropdown {
+                    position: absolute;
+                    left: 100%;
+                    top: 50%;
+                    transform: translate(0%, -50%);
+                    display: none;
+                    border-radius: 2px;
+                    background-color: var(--foxybdr-popup-input-bg-color);
+                    color: var(--foxybdr-general-t-color);
+                }
+
+                .foxybdr-control-prompt > div > .foxybdr-responsive-button:hover .foxybdr-responsive-dropdown {
+                    display: flex;
+                    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+                }
+
+                    .foxybdr-control-prompt > div > .foxybdr-responsive-button:hover .foxybdr-responsive-dropdown > .dashicons {
+                        position: relative;
+                        height: 22px;
+                        display: inline-block;
+                        padding: 4px 0px;
+                        font-size: 14px;
+                        line-height: 1.0;
+                        cursor: pointer;
+                        transition: all linear 0.2s;
+                    }
+
+                    .foxybdr-control-prompt > div > .foxybdr-responsive-button:hover .foxybdr-responsive-dropdown > .dashicons:hover {
+                        background-color: var(--foxybdr-general-t-color);
+                        color: var(--foxybdr-popup-input-bg-color);
+                    }
+
+                    .foxybdr-control-prompt > div > .foxybdr-responsive-button:hover .foxybdr-responsive-dropdown > .dashicons:active {
+                        top: 2px;
+                    }
+
+                    .foxybdr-control-prompt > div > .foxybdr-responsive-button:hover .foxybdr-responsive-dropdown > .dashicons:first-child {
+                        border-radius: 2px 0px 0px 2px;
+                    }
+
+                    .foxybdr-control-prompt > div > .foxybdr-responsive-button:hover .foxybdr-responsive-dropdown > .dashicons:last-child {
+                        border-radius: 0px 2px 2px 0px;
+                    }
+
+        .foxybdr-control-prompt > div:nth-child(2) {
+            display: flex;
+            align-items: flex-start;
+            padding: 1px 0px 4px 0px;
+        }
+
+            .foxybdr-control-prompt > div > .foxybdr-unit-select {
+                display: none;
+                border-width: 0px;
+                border-radius: 4px;
+                padding: 4px;
+                background-color: transparent;
+                color: var(--foxybdr-general-t-color);
+                font-family: var(--foxybdr-general-font);
+                font-size: 12px;
+                font-weight: normal;
+                line-height: 1.0;
+            }
+
+            .foxybdr-control-prompt > div > .foxybdr-unit-select.foxybdr-show {
+                display: block;
+            }
+
+            .foxybdr-control-prompt > div > .foxybdr-unit-select:hover {
+                background-color: var(--foxybdr-input-bg-color);
+                color: var(--foxybdr-input-t-color);
+            }
+
+                .foxybdr-control-prompt > div > .foxybdr-unit-select > option {
+                    border-width: 0px;
+                    background-color: var(--foxybdr-input-bg-color);
+                    color: var(--foxybdr-input-t-color);
+                }
+
+        .foxybdr-control-input {
+        width: 50%;
         display: flex;
         justify-content: flex-end;
-        width: 50%;
     }
 
     .foxybdr-control.foxybdr-control-multirow .foxybdr-control-input {
@@ -56,6 +156,147 @@
     color: var(--foxybdr-input-p-color);
 }
 
+.foxybdr-input-textarea {
+    width: 100%;
+    height: 60px;
+    border-width: 0px;
+    border-radius: 4px;
+    padding: 8px;
+    background-color: var(--foxybdr-input-bg-color);
+    color: var(--foxybdr-input-t-color);
+    font-family: var(--foxybdr-general-font);
+    font-size: 12px;
+    font-weight: normal;
+    line-height: 1.2;
+}
+
+.foxybdr-input-textarea::placeholder {
+    color: var(--foxybdr-input-p-color);
+}
+
+.foxybdr-input-select {
+    width: 100%;
+    border-width: 0px;
+    border-radius: 4px;
+    padding: 8px;
+    background-color: var(--foxybdr-input-bg-color);
+    color: var(--foxybdr-input-t-color);
+    font-family: var(--foxybdr-general-font);
+    font-size: 12px;
+    font-weight: normal;
+    line-height: 1.0;
+}
+
+    .foxybdr-input-select > option {
+        border-width: 0px;
+        background-color: var(--foxybdr-input-bg-color);
+        color: var(--foxybdr-input-t-color);
+    }
+
+.foxybdr-input-choose {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 4px;
+}
+
+    .foxybdr-input-choose > .foxybdr-button {
+        position: relative;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-width: 0px;
+        border-radius: 4px;
+        background-color: var(--foxybdr-input-bg-color);
+        color: var(--foxybdr-popup-input-bg-color);
+        font-size: 12px;
+        line-height: 1.0;
+        cursor: pointer;
+    }
+
+    .foxybdr-input-choose > .foxybdr-button.foxybdr-selected {
+        background-color: var(--foxybdr-popup-input-bg-color);
+        color: var(--foxybdr-input-t-color);
+    }
+
+    .foxybdr-input-choose > .foxybdr-button:hover {
+        color: var(--foxybdr-input-t-color);
+    }
+
+    .foxybdr-input-choose > .foxybdr-button:active {
+        top: 2px;
+    }
+
+.foxybdr-input-switcher {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    padding: 4px 0px;
+}
+
+    .foxybdr-input-switcher .foxybdr-track {
+        position: relative;
+        width: 50px;
+        height: 20px;
+        display: flex;
+        border-width: 1px;
+        border-style: solid;
+        border-color: transparent;
+        border-radius: 10px;
+        padding: 0px 4px;
+        background-color: #2c2c2c;
+        cursor: pointer;
+    }
+
+    .foxybdr-input-switcher .foxybdr-track:hover {
+        border-color: var(--foxybdr-input-t-color);
+    }
+
+        .foxybdr-input-switcher .foxybdr-label {
+            width: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+            .foxybdr-input-switcher .foxybdr-label > span {
+                color: transparent;
+                font-family: var(--foxybdr-general-font);
+                font-size: 10px;
+                font-weight: normal;
+                line-height: 1.0;
+            }
+
+            .foxybdr-input-switcher.foxybdr-selected .foxybdr-label:nth-child(1) > span {
+                color: var(--foxybdr-popup-input-bg-color);
+            }
+
+            .foxybdr-input-switcher:not(.foxybdr-selected) .foxybdr-label:nth-child(2) > span {
+                color: var(--foxybdr-popup-input-bg-color);
+            }
+
+        .foxybdr-input-switcher .foxybdr-handle {
+            position: absolute;
+            top: 0px;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            transition: left linear 0.1s;
+        }
+
+        .foxybdr-input-switcher:not(.foxybdr-selected) .foxybdr-handle {
+            left: 0px;
+            background-color: var(--foxybdr-popup-input-bg-color);
+        }
+
+        .foxybdr-input-switcher.foxybdr-selected .foxybdr-handle {
+            left: calc(100% - 18px);
+            background-color: var(--foxybdr-input-t-color);
+        }
+
 .foxybdr-input-number {
     width: 64px;
     border-width: 0px;
@@ -72,3 +313,182 @@
 .foxybdr-input-number::placeholder {
     color: var(--foxybdr-input-p-color);
 }
+
+.foxybdr-input-slider {
+    width: 100%;
+    display: flex;
+}
+
+    .foxybdr-input-slider > div:nth-child(1) {
+        display: flex;
+        align-items: center;
+        flex-grow: 1;
+        flex-shrink: 1;
+    }
+
+        .foxybdr-input-slider .foxybdr-track {
+            position: relative;
+            width: 100%;
+            height: 4px;
+            border-radius: 4px;
+            background-color: #2c2c2c;
+            cursor: pointer;
+        }
+
+            .foxybdr-input-slider .foxybdr-handle {
+                position: absolute;
+                left: var(--foxybdr-position);
+                top: 50%;
+                width: 16px;
+                height: 16px;
+                border-radius: 50%;
+                background-color: var(--foxybdr-input-bg-color);
+                transform: translateX(-50%) translateY(-50%);
+                --foxybdr-position: 0%;
+            }
+
+            .foxybdr-input-slider .foxybdr-handle:hover,
+            .foxybdr-input-slider .foxybdr-handle.foxybdr-dragging {
+                background-color: var(--foxybdr-input-p-color);
+            }
+
+    .foxybdr-input-slider > div:nth-child(2) {
+        flex-grow: 0;
+        flex-shrink: 0;
+        padding-left: 8px;
+    }
+        
+        .foxybdr-input-slider input[type='number'] {
+            width: 64px;
+            border-width: 0px;
+            border-radius: 4px;
+            padding: 8px;
+            background-color: var(--foxybdr-input-bg-color);
+            color: var(--foxybdr-input-t-color);
+            font-family: var(--foxybdr-general-font);
+            font-size: 12px;
+            font-weight: normal;
+            line-height: 1.0;
+        }
+
+        .foxybdr-input-slider input[type='number']::placeholder {
+            color: var(--foxybdr-input-p-color);
+        }
+
+.foxybdr-input-dimensions {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    --foxybdr-number-input-width: 60px;
+    --foxybdr-number-input-height: 28px;
+    --foxybdr-number-input-spacing: 4px;
+}
+
+    .foxybdr-input-dimensions > div {
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .foxybdr-input-dimensions:not(.foxybdr-corners) > div {
+        width: calc(var(--foxybdr-number-input-width) * 3 + var(--foxybdr-number-input-spacing) * 2);
+        height: calc(var(--foxybdr-number-input-height) * 3 + var(--foxybdr-number-input-spacing) * 2);
+    }
+
+    .foxybdr-input-dimensions.foxybdr-corners > div {
+        width: calc(var(--foxybdr-number-input-width) * 2 + var(--foxybdr-number-input-height) + var(--foxybdr-number-input-spacing) * 2);
+        height: calc(var(--foxybdr-number-input-height) * 3 + var(--foxybdr-number-input-spacing) * 2);
+    }
+
+        .foxybdr-input-dimensions .foxybdr-lock-button {
+            position: relative;
+            width: var(--foxybdr-number-input-height);
+            height: var(--foxybdr-number-input-height);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            background-color: #2c2c2c;
+            color: var(--foxybdr-popup-input-bg-color);
+            font-size: 12px;
+            line-height: 1.0;
+            cursor: pointer;
+        }
+
+        .foxybdr-input-dimensions .foxybdr-lock-button:hover {
+            background-color: var(--foxybdr-input-bg-color);
+            color: var(--foxybdr-input-t-color);
+        }
+
+        .foxybdr-input-dimensions .foxybdr-lock-button:active {
+            top: 2px;
+        }
+
+            .foxybdr-input-dimensions .foxybdr-lock-button > span.dashicons {
+                display: none;
+                transition: none;
+            }
+
+            .foxybdr-input-dimensions .foxybdr-lock-button.foxybdr-locked > span.dashicons-lock,
+            .foxybdr-input-dimensions .foxybdr-lock-button:not(.foxybdr-locked) > span.dashicons-unlock {
+                display: block;
+            }
+
+        .foxybdr-input-dimensions input[type='number'] {
+            position: absolute;
+            width: var(--foxybdr-number-input-width);
+            border-width: 0px;
+            border-radius: 4px;
+            padding: 8px;
+            background-color: var(--foxybdr-input-bg-color);
+            color: var(--foxybdr-input-t-color);
+            font-family: var(--foxybdr-general-font);
+            font-size: 12px;
+            font-weight: normal;
+            line-height: 1.0;
+            text-align: center;
+        }
+
+        .foxybdr-input-dimensions input[type='number']::placeholder {
+            color: var(--foxybdr-input-p-color);
+        }
+
+        .foxybdr-input-dimensions:not(.foxybdr-corners) input.foxybdr-left {
+            left: 0%;
+            top: 50%;
+            transform: translate(0%, -50%);
+        }
+        .foxybdr-input-dimensions:not(.foxybdr-corners) input.foxybdr-top {
+            left: 50%;
+            top: 0%;
+            transform: translate(-50%, 0%);
+        }
+        .foxybdr-input-dimensions:not(.foxybdr-corners) input.foxybdr-right {
+            right: 0%;
+            top: 50%;
+            transform: translate(0%, -50%);
+        }
+        .foxybdr-input-dimensions:not(.foxybdr-corners) input.foxybdr-bottom {
+            left: 50%;
+            bottom: 0%;
+            transform: translate(-50%, 0%);
+        }
+
+        .foxybdr-input-dimensions.foxybdr-corners input.foxybdr-left {
+            left: 0%;
+            top: 0%;
+        }
+        .foxybdr-input-dimensions.foxybdr-corners input.foxybdr-top {
+            right: 0%;
+            top: 0%;
+        }
+        .foxybdr-input-dimensions.foxybdr-corners input.foxybdr-right {
+            right: 0%;
+            bottom: 0%;
+        }
+        .foxybdr-input-dimensions.foxybdr-corners input.foxybdr-bottom {
+            left: 0%;
+            bottom: 0%;
+        }
+

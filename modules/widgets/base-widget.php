@@ -31,9 +31,21 @@ abstract class BaseWidget
 
     protected static $TAB_ADVANCED = 'advanced';
 
-    protected static $CONTROL_TEXT = 'TEXT';
+    protected static $CONTROL_TYPE_TEXT = 'TEXT';
 
-    protected static $CONTROL_NUMBER = 'NUMBER';
+    protected static $CONTROL_TYPE_TEXTAREA = 'TEXTAREA';
+
+    protected static $CONTROL_TYPE_SELECT = 'SELECT';
+
+    protected static $CONTROL_TYPE_CHOOSE = 'CHOOSE';
+
+    protected static $CONTROL_TYPE_SWITCHER = 'SWITCHER';
+
+    protected static $CONTROL_TYPE_NUMBER = 'NUMBER';
+
+    protected static $CONTROL_TYPE_SLIDER = 'SLIDER';
+
+    protected static $CONTROL_TYPE_DIMENSIONS = 'DIMENSIONS';
 
     protected $title = '';
 

@@ -24,7 +24,9 @@ body {
 	font-family: var(--foxybdr-general-font);
 }
 
-input:focus {
+input:focus,
+textarea:focus,
+select:focus {
 	outline: none;
 }
 
@@ -223,6 +225,7 @@ input:focus {
 				z-index: 0;
 				display: flex;
 				justify-content: center;
+				background-color: var(--foxybdr-input-bg-color);
 				user-select: none;
 			}
 
@@ -247,7 +250,7 @@ input:focus {
 						display: none;
 					}
 
-					#foxybdr-editor-screen.foxybdr-line-resize-mode .foxybdr-iframe-cover {
+					#foxybdr-editor-screen.foxybdr-drag-exclude-iframe .foxybdr-iframe-cover {
 						display: block;
 					}
 

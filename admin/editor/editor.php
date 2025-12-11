@@ -96,6 +96,8 @@ class Editor
 
         $post_id = absint($_GET['post']);
 
+        $document = \FoxyBuilder\Modules\Document::get_document($post_id);
+
         $foxybuilder_icon_url = FOXYBUILDER_PLUGIN_URL . "admin/assets/fonts/foxybuilder/foxybuilder.css?ver=" . FOXYBUILDER_VERSION;
 
         $icon_libraries = \FoxyBuilder\Modules\AssetManager::instance()->get_icon_libraries();
@@ -116,6 +118,7 @@ class Editor
         wp_localize_script('foxybdr-admin-editor-page', 'FOXYAPP', [
             'ajaxUrl' => admin_url('admin-ajax.php'),
             'templateID' => $post_id,
+            'widgetInstanceIdCounter' => $document->widget_instance_id_counter(),
             'widgetCategories' => $this->categories,
             'widgets' => $this->widgets,
             'assets' => [
@@ -139,41 +142,18 @@ class Editor
     public function action_footer()
     {
         ?>
-        <script type="text/javascript" id="foxybdr-tmpl-render">
 
-            var FoxyRender = {};
+        <script type="text/plain" id="foxybdr-tmpl-thread">
 
-            FoxyRender.Printer = class
-            {
-                static textSegments = [];
+            <?php
 
-                static clear()
+                require_once FOXYBUILDER_PLUGIN_PATH . '/admin/assets/js/editor-thread.js';
+
+                foreach ($this->widgets as $widgetName => $widgetDefinition)
                 {
-                    FoxyRender.Printer.textSegments = [];
-                }
-
-                static write(textSegment)
-                {
-                    FoxyRender.Printer.textSegments.push(textSegment);
-                }
-
-                static getOutput()
-                {
-                    return FoxyRender.Printer.textSegments.join();
-                }
-            };
-
-            FoxyRender.renderFunctions = {};
-
-        </script>
-        <?php
-
-        foreach ($this->widgets as $widgetName => $widgetDefinition)
-        {
-            if (isset($widgetDefinition['render']) && $widgetDefinition['render'] !== null)
-            {
-                ?>
-<script type="text/javascript" id="foxybdr-tmpl-render.<?php echo esc_attr($widgetName); ?>">
+                    if (isset($widgetDefinition['render']) && $widgetDefinition['render'] !== null)
+                    {
+                        ?>
 
 FoxyRender.renderFunctions['<?php echo esc_html($widgetName); ?>'] = function(wInstanceID, settings) {
 
@@ -186,15 +166,20 @@ FoxyRender.Printer.clear();
 let print = FoxyRender.Printer.write;
 
 <?php
-    require $widgetDefinition['render'];
+    require_once $widgetDefinition['render'];
 ?>
 
 return FoxyRender.Printer.getOutput();
 };
 
-</script>
-                <?php
-            }
-        }
+                        <?php
+                    }
+                }
+
+            ?>
+        
+        </script>
+        
+        <?php
     }
 }

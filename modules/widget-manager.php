@@ -40,10 +40,12 @@ class WidgetManager
     {
         require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/settings/site.php';
         require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/layout/section.php';
+        require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/layout/column.php';
 
         $this->widgets = [
             new \FoxyBuilder\Modules\Widgets\Settings\Site(),
             new \FoxyBuilder\Modules\Widgets\Layout\Section(),
+            new \FoxyBuilder\Modules\Widgets\Layout\Column(),
         ];
     }
 

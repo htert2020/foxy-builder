@@ -20,6 +20,7 @@ class Document
         '_foxybdr_version' => null,
         '_foxybdr_edit_mode' => null,
         '_foxybdr_widget_instances' => null,
+        '_foxybdr_wi_id' => null,
     ];
 
     protected function __construct($post_obj)
@@ -110,6 +111,14 @@ class Document
             return $this->meta['_foxybdr_edit_mode'] === 'yes';
         
         $this->meta['_foxybdr_edit_mode'] = $newValue ? 'yes' : 'no';
+    }
+
+    public function widget_instance_id_counter($newValue = null)
+    {
+        if ($newValue === null)
+            return (int)$this->meta['_foxybdr_wi_id'];
+
+        $this->meta['_foxybdr_wi_id'] = (string)$newValue;
     }
 
     public function render($as_post_content = false)
