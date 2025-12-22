@@ -195,6 +195,10 @@ ThePage::instance()->init();
 		<textarea class="foxybdr-input-textarea"></textarea>
 	</script>
 
+	<script id="foxybdr-tmpl-input-wysiwyg" type="text/html">
+		<textarea class="foxybdr-input-wysiwyg"></textarea>
+	</script>
+
 	<script id="foxybdr-tmpl-input-select" type="text/html">
 		<select class="foxybdr-input-select"></select>
 	</script>
@@ -246,6 +250,90 @@ ThePage::instance()->init();
 				<input type="number" class="foxybdr-right" value="" />
 				<input type="number" class="foxybdr-bottom" value="" />
 			</div>
+		</div>
+	</script>
+
+	<script id="foxybdr-tmpl-input-url" type="text/html">
+		<input type="url" class="foxybdr-input-url" value="" />
+	</script>
+
+	<script id="foxybdr-tmpl-input-color" type="text/html">
+		<div class="foxybdr-input-color">
+			<div class="foxybdr-global-button">
+				<span class="dashicons dashicons-admin-site-alt3"></span>
+				<div class="foxybdr-global-dropdown foxybdr-control-dropdown">
+					<div class="foxybdr-title-bar">
+						<div>
+							<span class="foxybdr-title">Global Colors</span>
+						</div>
+						<div>
+							<span class="dashicons dashicons-admin-generic"></span>
+							<span class="dashicons dashicons-trash"></span>
+						</div>
+					</div>
+					<div class="foxybdr-body">
+					</div>
+				</div>
+			</div>
+			<div class="foxybdr-color-button">
+				<img src="<?php echo esc_attr(FOXYBUILDER_PLUGIN_URL . 'admin/assets/images/control_color_button.png'); ?>" />
+				<div class="foxybdr-custom-dropdown foxybdr-control-dropdown">
+					<div class="foxybdr-title-bar">
+						<div>
+							<span class="foxybdr-title">Color Picker</span>
+						</div>
+						<div>
+							<span class="dashicons dashicons-trash"></span>
+						</div>
+					</div>
+					<div class="foxybdr-body">
+						<div class="foxybdr-color-picker-container"></div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</script>
+
+	<script id="foxybdr-tmpl-input-color-picker" type="text/html">
+		<div class="foxybdr-input-color-picker">
+			<div class="foxybdr-main-track">
+				<div class="foxybdr-handle"></div>
+			</div>
+			<div class="foxybdr-hue-track">
+				<div class="foxybdr-handle"></div>
+			</div>
+			<div class="foxybdr-opacity-track">
+				<div class="foxybdr-handle"></div>
+			</div>
+			<div class="foxybdr-code-container">
+				<input type="text" value="" />
+				<div class="foxybdr-code-buttons">
+					<span foxybdr-name="foxybdr-hexa" class="foxybdr-selected">HEXA</span>
+					<span foxybdr-name="foxybdr-rgba">RGBA</span>
+					<span foxybdr-name="foxybdr-hsla">HSLA</span>
+				</div>
+			</div>
+		</div>
+	</script>
+
+	<script id="foxybdr-tmpl-input-color-global-row" type="text/html">
+		<div class="foxybdr-input-color-global-row" foxybdr-id="">
+			<div>
+				<div></div>
+			</div>
+			<div>
+				<span></span>
+			</div>
+			<div>
+				<span class="dashicons dashicons-yes"></span>
+			</div>
+		</div>
+	</script>
+
+	<script id="foxybdr-tmpl-input-media" type="text/html">
+		<div class="foxybdr-input-media">
+			<span class="dashicons dashicons-insert"></span>
+			<span class="dashicons dashicons-trash"></span>
 		</div>
 	</script>
 

@@ -67,7 +67,42 @@ class Section extends \FoxyBuilder\Modules\Widgets\BaseWidget
                 'placeholder' => __('This is a cool website.', 'foxy-builder'),
             ]
         );
+
+        $this->add_control(
+            'content_wysiwyg',
+            [
+                'label' => 'Wysiwyg Text',
+                'type' => self::$CONTROL_TYPE_WYSIWYG,
+            ]
+        );
         
+        $this->add_control(
+            'content_url',
+            [
+                'label'   => __('URL', 'foxy-builder'),
+                'type'    => self::$CONTROL_TYPE_URL,
+                'placeholder' => __('http://www.mysite.com', 'foxy-builder'),
+            ]
+        );
+
+        $this->add_control(
+            'content_image_1',
+            [
+                'label' => __('Choose Image #1', 'foxy-builder'),
+                'type'  => self::$CONTROL_TYPE_MEDIA,
+                'media_title' => 'Image',
+            ]
+        );
+
+        $this->add_control(
+            'content_image_2',
+            [
+                'label' => __('Choose Image #2', 'foxy-builder'),
+                'type'  => self::$CONTROL_TYPE_MEDIA,
+                'media_title' => 'Image',
+            ]
+        );
+
         $this->end_controls_section();
 
 
@@ -158,6 +193,17 @@ class Section extends \FoxyBuilder\Modules\Widgets\BaseWidget
                 //'default' => 'left',
                 'selectors' => [
                     '{{WRAPPER}} > div' => 'text-align: {{VALUE}}',
+                ],
+            ]
+        );
+
+        $this->add_control(
+            "style_test_color",
+            [
+                'label' => __('Test Color', 'foxy-builder'),
+                'type' => self::$CONTROL_TYPE_COLOR,
+                'selectors' => [
+                    '{{WRAPPER}} > div' => 'background-color: {{VALUE}}',
                 ],
             ]
         );

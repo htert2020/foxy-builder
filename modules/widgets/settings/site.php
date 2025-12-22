@@ -11,6 +11,8 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
 {
     protected static $TAB_SITE_IDENTITY = 'site-identity';
 
+    protected static $TAB_COLORS = 'colors';
+
     protected static $TAB_PALETTES = 'palettes';
 
     protected static $TAB_DEFAULT_STYLES = 'default-styles';
@@ -50,6 +52,11 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
             [
                 'title' => __('Site Identity', 'foxy-builder'),
                 'name' => self::$TAB_SITE_IDENTITY,
+                'sections' => [],
+            ],
+            [
+                'title' => __('Colors', 'foxy-builder'),
+                'name' => self::$TAB_COLORS,
                 'sections' => [],
             ],
             [
@@ -185,6 +192,52 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
                 'default' => __('', 'foxy-builder'),
             ]
         );
+        
+        $this->end_controls_section();
+
+
+        $this->start_controls_section(
+            'colors',
+            [
+                'label' => __('Global Colors', 'foxy-builder'),
+                'tab' => self::$TAB_COLORS,
+            ]
+        );
+
+        for ($i = 1; $i <= 10; $i++)
+        {
+            switch ($i)
+            {
+                case 1:  $name = __('Primary', 'foxy-builder'); break;
+                case 2:  $name = __('Secondary', 'foxy-builder'); break;
+                case 3:  $name = __('Text', 'foxy-builder'); break;
+                case 4:  $name = __('Accent', 'foxy-builder'); break;
+                default: $name = __('Color #', 'foxy-builder') . (string)$i; break;
+            }
+
+            $this->add_control(
+                "colors_name_{$i}",
+                [
+                    'label'   => __('Name', 'foxy-builder'),
+                    'type'    => self::$CONTROL_TYPE_TEXT,
+                    'default' => $name,
+                ]
+            );
+            
+            $this->add_control(
+                "colors_global_{$i}",
+                [
+                    'label' => __('Color', 'foxy-builder'),
+                    'type' => self::$CONTROL_TYPE_COLOR,
+                    'is_global' => true,
+                    'default' => '#808080',
+                    'selectors' => [
+                        'body' => "--foxybdr-global-color-{$i}: {{VALUE}}",
+                    ],
+                    'separator' => $i < 10 ? 'after' : 'none',
+                ]
+            );
+        }
         
         $this->end_controls_section();
 

@@ -1,0 +1,7 @@
+body#tinymce > *:first-child {
+	margin-top: 0px;
+}
+
+body#tinymce > *:last-child {
+	margin-bottom: 0px;
+}

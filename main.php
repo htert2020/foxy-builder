@@ -48,11 +48,8 @@ class Main
             require_once FOXYBUILDER_PLUGIN_PATH . '/admin/doc-editor/doc-editor.php';
             \FoxyBuilder\Admin\DocEditor\DocEditor::instance()->init();
 
-            if (isset($_GET['action']) && $_GET['action'] === 'foxy_builder')
-            {
-                require_once FOXYBUILDER_PLUGIN_PATH . '/admin/editor/editor.php';
-                \FoxyBuilder\Admin\Editor\Editor::instance()->init();
-            }
+            require_once FOXYBUILDER_PLUGIN_PATH . '/admin/editor/editor.php';
+            \FoxyBuilder\Admin\Editor\Editor::instance()->init();
         }
         else
         {

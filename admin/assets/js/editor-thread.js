@@ -111,6 +111,8 @@ FoxyApp.Class = {};
 
 FoxyApp.Class.Renderer = class
 {
+    #globalColorRegex = /var\(--foxybdr-global-color-(\d+)\)/;
+
     buildSettings(wInstanceID, context, sparseSettings, widgetSettings)
     {
         let contextualSparseSettings = this.#applyContextToSettings(wInstanceID, context, sparseSettings);
@@ -148,19 +150,57 @@ FoxyApp.Class.Renderer = class
 
                     let resp = FoxyApp.Function.evaluateValue(sparseSettings[settingName], settingParams);
 
-                    eSettings[`${settingName}`] = resp.desktop;
+                    eSettings[`${settingName}`] = this.#evaluateGlobal(resp.desktop, settingParams.type);
 
                     if (resp.tablet !== undefined)
-                        eSettings[`${settingName}_tablet`] = resp.tablet;
+                        eSettings[`${settingName}_tablet`] = this.#evaluateGlobal(resp.tablet, settingParams.type);
 
                     if (resp.mobile !== undefined)
-                        eSettings[`${settingName}_mobile`] = resp.mobile;
+                        eSettings[`${settingName}_mobile`] = this.#evaluateGlobal(resp.mobile, settingParams.type);
 
                     break;
             }
         }
 
         return eSettings;
+    }
+
+    #evaluateGlobal(value, type)
+    {
+        if ([ 'COLOR' ].includes(type) === false)
+            return value;
+
+        let settingName;
+
+        switch (type)
+        {
+            case 'COLOR':
+                {
+                    let match = this.#globalColorRegex.exec(value);
+
+                    if (match !== null)
+                    {
+                        settingName = `colors_global_${match[1]}`;
+                    }
+                }
+                break;
+
+            // TODO: Evaluate global fonts.
+        }
+
+        if (settingName === undefined)
+            return value;
+
+        let widgetInstance = FoxyApp.Model.widgetInstances['S-siteSettings'];
+
+        let newValue = widgetInstance.data.sparseSettings[settingName];
+
+        if (newValue !== undefined)
+            return newValue;
+
+        let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetID];
+
+        return widget.settings[settingName].default;
     }
 };
 
@@ -358,6 +398,17 @@ FoxyApp.Class.StylesheetGenerator = class
 
     #buildStylesheetStr()
     {
+        let widgetInstance = FoxyApp.Model.widgetInstances['S-siteSettings'];
+        let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetID];
+
+        let tabletValue = widgetInstance.data.sparseSettings['breakpoints_tablet'];
+        if (tabletValue === undefined || tabletValue === '')
+            tabletValue = widget.settings['breakpoints_tablet'].default;
+
+        let mobileValue = widgetInstance.data.sparseSettings['breakpoints_mobile'];
+        if (mobileValue === undefined || mobileValue === '')
+            mobileValue = widget.settings['breakpoints_mobile'].default;
+
         let lines = [];
         
         for (let device of [ 'desktop', 'tablet', 'mobile' ])
@@ -370,11 +421,11 @@ FoxyApp.Class.StylesheetGenerator = class
             switch (device)
             {
                 case 'tablet':
-                    lines.push(`@media(max-width:${FoxyApp.Model.responsiveBreakpoints['tablet']}px){`);
+                    lines.push(`@media(max-width:${tabletValue}px){`);
                     break;
 
                 case 'mobile':
-                    lines.push(`@media(max-width:${FoxyApp.Model.responsiveBreakpoints['mobile']}px){`);
+                    lines.push(`@media(max-width:${mobileValue}px){`);
                     break;
             }
 
@@ -409,7 +460,6 @@ FoxyApp.Model = {};
 FoxyApp.Model.controlDefaultValues = {};
 FoxyApp.Model.widgets = {};
 FoxyApp.Model.widgetInstances = {};
-FoxyApp.Model.responsiveBreakpoints = {};
 
 FoxyApp.renderer = null;
 FoxyApp.stylesheetGenerator = null;
@@ -437,11 +487,6 @@ FoxyApp.Main = class
 
             case 'update-widget-instance':
                 this.#updateWidgetInstance(request.wInstanceID, request.settingName, request.settingValue);
-                return { status: 'OK' };
-                break;
-
-            case 'responsive-breakpoints':
-                this.#setResponsiveBreakpoints(request.tablet, request.mobile);
                 return { status: 'OK' };
                 break;
 
@@ -525,14 +570,6 @@ FoxyApp.Main = class
     #buildStylesheet(wInstanceID)
     {
         return FoxyApp.stylesheetGenerator.build(wInstanceID);
-    }
-
-    #setResponsiveBreakpoints(tablet, mobile)
-    {
-        FoxyApp.Model.responsiveBreakpoints = {
-            tablet: tablet,
-            mobile: mobile
-        };
     }
 };
 

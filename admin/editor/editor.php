@@ -5,6 +5,7 @@ namespace FoxyBuilder\Admin\Editor;
 if (!defined('ABSPATH'))
     exit;
 
+require_once FOXYBUILDER_PLUGIN_PATH . '/includes/security.php';
 require_once FOXYBUILDER_PLUGIN_PATH . '/modules/document.php';
 require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widget-manager.php';
 require_once FOXYBUILDER_PLUGIN_PATH . '/modules/asset-manager.php';
@@ -14,6 +15,10 @@ class Editor
     private $categories = null;
 
     private $widgets = null;
+
+    private $icon_libraries = null;
+
+    private $nonceContext = 'editor';
 
     private static $_instance = null;
     
@@ -33,17 +38,15 @@ class Editor
 
     public function init()
     {
-        add_action('admin_action_foxy_builder', [ $this, 'action_foxy_builder' ]);
+        if (isset($_GET['action']) && $_GET['action'] === 'foxy_builder')
+        {
+            add_action('admin_action_foxy_builder', [ $this, 'action_foxy_builder' ]);
+        }
 
-        $widget_manager = \FoxyBuilder\Modules\WidgetManager::instance();
+        add_filter('upload_mimes', [ $this, 'filter_upload_mimes' ]);
 
-        $widget_manager->add_category('layout', 'Layout');
-
-        $widget_manager->add_widgets();
-
-        $this->categories = $widget_manager->build_category_definitions();
-
-        $this->widgets = $widget_manager->build_widget_definitions();
+        add_action('wp_ajax_foxybdr_editor_get_wysiwyg_links', [ $this, 'get_wysiwyg_links' ]);
+        add_action('wp_ajax_foxybdr_editor_refresh_nonce', [ $this, 'refresh_nonce' ]);
     }
 
     public function action_foxy_builder()
@@ -94,42 +97,43 @@ class Editor
     {
         global $wp_styles, $wp_scripts;
 
-        $post_id = absint($_GET['post']);
-
-        $document = \FoxyBuilder\Modules\Document::get_document($post_id);
-
-        $foxybuilder_icon_url = FOXYBUILDER_PLUGIN_URL . "admin/assets/fonts/foxybuilder/foxybuilder.css?ver=" . FOXYBUILDER_VERSION;
-
-        $icon_libraries = \FoxyBuilder\Modules\AssetManager::instance()->get_icon_libraries();
-        $fas_icon_urls = $icon_libraries['fas']['css_urls'];
-
         $wp_styles = new \WP_Styles();
         $wp_scripts = new \WP_Scripts();
     
+        $widget_manager = \FoxyBuilder\Modules\WidgetManager::instance();
+        $widget_manager->add_category('layout', 'Layout');
+        $widget_manager->add_widgets();
+        $this->categories = $widget_manager->build_category_definitions();
+        $this->widgets = $widget_manager->build_widget_definitions();
+        $this->icon_libraries = \FoxyBuilder\Modules\AssetManager::instance()->get_icon_libraries();
+
+        $foxybuilder_icon_url = FOXYBUILDER_PLUGIN_URL . "admin/assets/fonts/foxybuilder/foxybuilder.css?ver=" . FOXYBUILDER_VERSION;
+
         $suffix = defined('SCRIPT_DEBUG') && SCRIPT_DEBUG ? '' : '.min';
 
         wp_enqueue_style('foxybdr-admin-wp-common', FOXYBUILDER_PLUGIN_URL . "admin/assets/css/wp-common.css", [], FOXYBUILDER_VERSION);
+        wp_enqueue_style('foxybdr-admin', FOXYBUILDER_PLUGIN_URL . "admin/assets/css/admin.css", [], FOXYBUILDER_VERSION);
         wp_enqueue_style('foxybdr-admin-editor-page', FOXYBUILDER_PLUGIN_URL . "admin/assets/css/editor-page.css", [], FOXYBUILDER_VERSION);
         wp_enqueue_style('foxybdr-admin-editor-controls', FOXYBUILDER_PLUGIN_URL . "admin/assets/css/editor-controls.css", [], FOXYBUILDER_VERSION);
     
+        wp_enqueue_script('foxybdr-admin', FOXYBUILDER_PLUGIN_URL . 'admin/assets/js/admin' . $suffix . '.js', [], FOXYBUILDER_VERSION);
         wp_enqueue_script('foxybdr-admin-editor-page', FOXYBUILDER_PLUGIN_URL . 'admin/assets/js/editor-page.js', [], FOXYBUILDER_VERSION);
         wp_enqueue_script('foxybdr-admin-editor-controls', FOXYBUILDER_PLUGIN_URL . 'admin/assets/js/editor-controls.js', [], FOXYBUILDER_VERSION);
 
-        wp_localize_script('foxybdr-admin-editor-page', 'FOXYAPP', [
+        wp_localize_script('foxybdr-admin', 'FOXYBUILDER', [
             'ajaxUrl' => admin_url('admin-ajax.php'),
-            'templateID' => $post_id,
-            'widgetInstanceIdCounter' => $document->widget_instance_id_counter(),
-            'widgetCategories' => $this->categories,
-            'widgets' => $this->widgets,
-            'assets' => [
-                'iconLibraries' => $icon_libraries,
+            'dialogs' => [
+                'nonceError' => [
+                    'title' => __('Error', 'foxy-builder'),
+                    'message' => __('Failed communication with server. Please reload this page.', 'foxy-builder'),
+                    'okLabel' => __('OK', 'foxy-builder'),
+                ],
             ],
-            'requiredAssetUrls' => $fas_icon_urls,
         ]);
 
         ?><link href="<?php echo esc_url($foxybuilder_icon_url); ?>" rel="stylesheet" type="text/css" /><?php
 
-        foreach ($fas_icon_urls as $url)
+        foreach ($this->icon_libraries['fas']['css_urls'] as $url)
         {
             ?><link href="<?php echo esc_url($url); ?>" rel="stylesheet" type="text/css" foxybdr-asset="foxybdr-asset" /><?php
         }
@@ -137,11 +141,41 @@ class Editor
         wp_print_scripts([ 'wp-tinymce' ]);
     
         wp_enqueue_media();
+
+        wp_enqueue_style('dashicons');
     }
 
     public function action_footer()
     {
+        $post_id = absint($_GET['post']);
+
+        $document = \FoxyBuilder\Modules\Document::get_document($post_id);
+
+        require FOXYBUILDER_PLUGIN_PATH . '/admin/assets/html/admin.php';
+
+        $optStr = get_option('foxybdr_upload_file_types');
+        $uploadFileTypes = $optStr !== false ? explode('|', $optStr) : [];
+
         ?>
+
+        <script type="text/javascript" id="foxybdr-admin-editor-page-js-extra">
+
+            var FOXYAPP = <?php echo wp_json_encode([
+                'ajaxUrl' => admin_url('admin-ajax.php'),
+                'pluginUrl' => FOXYBUILDER_PLUGIN_URL,
+                'templateID' => $post_id,
+                'widgetInstanceIdCounter' => $document->widget_instance_id_counter(),
+                'widgetCategories' => $this->categories,
+                'widgets' => $this->widgets,
+                'assets' => [
+                    'iconLibraries' => $this->icon_libraries,
+                ],
+                'requiredAssetUrls' => $this->icon_libraries['fas']['css_urls'],
+                'uploadFileTypes' => $uploadFileTypes,
+                'nonce' => wp_create_nonce($this->nonceContext),
+            ]); ?>;
+
+        </script>
 
         <script type="text/plain" id="foxybdr-tmpl-thread">
 
@@ -181,5 +215,121 @@ return FoxyRender.Printer.getOutput();
         </script>
         
         <?php
+    }
+
+    public function filter_upload_mimes($mimes)
+    {
+        $user = wp_get_current_user();
+
+        if ($user->ID !== 0 && $user->has_cap('edit_pages'))
+        {
+            $upload_context = \FoxyBuilder\Includes\Security::sanitize_request($_POST, 'foxybdr-media-upload');
+
+            if ($upload_context === 'foxybdr-upload-from-editor')
+            {
+                $optStr = get_option('foxybdr_upload_file_types');
+                $uploadFileTypes = $optStr !== false ? explode('|', $optStr) : [];
+
+                foreach ($uploadFileTypes as $fileType)
+                {
+                    if (!isset($mimes[$fileType]))
+                    {
+                        $mimeType = null;
+
+                        switch ($fileType)
+                        {
+                            case 'svg':
+                                $mimeType = 'image/svg+xml';
+                                break;
+                        }
+
+                        if ($mimeType !== null)
+                            $mimes[$fileType] = $mimeType;
+                    }
+                }
+            }
+        }
+
+        return $mimes;
+    }
+
+    public function get_wysiwyg_links()
+    {
+        if (wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), $this->nonceContext) === false)
+        {
+            wp_send_json([
+                'status' => 'ERROR',
+            ], 403);
+            return;
+        }
+
+        $post_types = get_post_types([ 'public' => true ], 'objects');
+
+        $types = [];
+        $links_by_type = [];
+
+        foreach ($post_types as $type => $pt)
+        {
+            $types[] = $type;
+            $links_by_type[$type] = [];
+        }
+
+        $query = new \WP_Query([
+            'post_type' => $types,
+            'post_status' => 'publish',
+            'orderby' => 'title',
+            'order' => 'ASC',
+            'nopaging' => true
+        ]);
+
+        if ($query->have_posts())
+        {
+            while ($query->have_posts())
+            {
+                $query->the_post();
+
+                $url = get_permalink($query->post->ID);
+                $title = $query->post->post_title;
+                $type = $query->post->post_type;
+
+                $links_by_type[$type][] = [
+                    'title' => $title,
+                    'value' => $url
+                ];
+            }
+        }
+
+        $links = [];
+        foreach ($links_by_type as $type => $linkList)
+        {
+            if (count($linkList) === 0)
+                continue;
+
+            $links[] = [
+                'title' => $post_types[$type]->label,
+                'menu' => $linkList
+            ];
+        }
+
+        wp_send_json([
+            'status' => 'OK',
+            'links' => $links,
+        ], 200);
+    }
+
+    public function refresh_nonce()
+    {
+        if (wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), $this->nonceContext) === false)
+        {
+            wp_send_json([
+                'status' => 'ERROR',
+            ], 403);
+            return;
+        }
+
+        wp_send_json([
+            'status' => 'OK',
+            'nonce' => wp_create_nonce($this->nonceContext),
+        ], 200);
     }
 }

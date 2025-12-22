@@ -42,6 +42,11 @@ FoxyApp.Function.isValueEqual = function(firstObject, secondObject)
     return true;
 }
 
+FoxyApp.Function.navigateToGlobalColors = function()
+{
+    FoxyApp.View.PanelModule.siteSettingsModule.navigateToGlobalColors();
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CLASSES
@@ -941,6 +946,12 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule = class extends FoxyApp.Cl
             this.#tabs[i].activate(i === tabIndex);
     }
 
+    activateTabPageByName(name)
+    {
+        for (let i = 0; i < this.#tabs.length; i++)
+            this.#tabs[i].activate(this.#tabs[i].getName() === name);
+    }
+
     load(domainType, domainID, widgetInstanceID)
     {
         this.unload();
@@ -1104,6 +1115,11 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Tab = class extends FoxyAp
         }
     }
 
+    getName()
+    {
+        return this.#tabData.name;
+    }
+
     destroy()
     {
         super.destroy();
@@ -1159,16 +1175,32 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Tab_Section = class extend
 
         let sectionBodyElement = this.#sectionElement.querySelector('.foxybdr-body');
 
-        for (let settingName of this.#sectionData.settings)
+        for (let i = 0; i < this.#sectionData.settings.length; i++)
         {
+            let settingName = this.#sectionData.settings[i];
+
             let settingParams = this.#settingDefinitions[settingName];
 
             let value = this.#settingValues[settingName] !== undefined ? this.#settingValues[settingName] : null;
+
+            if ([ 'before', 'both' ].includes(settingParams.separator))
+            {
+                let separatorElement = document.createElement('div');
+                separatorElement.classList.add('foxybdr-separator');
+                sectionBodyElement.appendChild(separatorElement);
+            }
 
             let control = FoxyControls.Class.Factory.create(settingParams.type, settingName, settingParams, value);
             control.create(sectionBodyElement);
             control.addEventListener(this);
             this.#controls.push(control);
+
+            if ([ 'after', 'both' ].includes(settingParams.separator))
+            {
+                let separatorElement = document.createElement('div');
+                separatorElement.classList.add('foxybdr-separator');
+                sectionBodyElement.appendChild(separatorElement);
+            }
         }
     }
 
@@ -1206,10 +1238,20 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Tab_Section = class extend
 
     activate(show)
     {
-        if (show)
+        if (show && this.#sectionElement.classList.contains('foxybdr-active') === false)
+        {
             this.#sectionElement.classList.add('foxybdr-active');
-        else
+
+            let sectionElement = this.#sectionElement;
+            setTimeout(function() {
+                sectionElement.classList.add('foxybdr-show-overflow');
+            }, 200);
+        }
+        else if (!show && this.#sectionElement.classList.contains('foxybdr-active') === true)
+        {
+            this.#sectionElement.classList.remove('foxybdr-show-overflow');
             this.#sectionElement.classList.remove('foxybdr-active');
+        }
     }
 
     destroy()
@@ -2136,6 +2178,13 @@ FoxyApp.Class.View.PanelModule.SiteSettingsModule = class extends FoxyApp.Class.
 
         return 'Site Settings';
     }
+
+    navigateToGlobalColors()
+    {
+        this.activateTabPageByName('colors');
+
+        FoxyApp.Manager.panelManager.activate(this);
+    }
 };
 
 FoxyApp.Class.View.PanelModule.PropertiesModule = class extends FoxyApp.Class.UI.Component.PanelModule.SettingsModule
@@ -2275,9 +2324,6 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
             this.onPreviewLoaded();
 
         this.#resizeIFrame();
-
-        let breakpoints = this.#getResponsiveBreakpoints();
-        FoxyApp.backgroundThread.submitRequest_responsiveBreakpoints(breakpoints.tablet, breakpoints.mobile);
     }
 
     onPreviewLoaded()
@@ -2325,6 +2371,8 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
             this.registerEvent(this.#iFrameElement.contentWindow, 'keyup');
             this.registerEvent(window, 'keyup');
         }
+
+        this.initWidgetInstances();
     }
 
     handleEvent(e)
@@ -2343,18 +2391,7 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
         }
         else if (e instanceof FoxyApp.Class.Event.Model.Settings.Update)
         {
-            if (e.wInstanceID === 'S-siteSettings' && [ 'breakpoints_tablet', 'breakpoints_mobile' ].includes(e.settingName))
-            {
-                this.#resizeIFrame();
-
-                let breakpoints = this.#getResponsiveBreakpoints();
-                FoxyApp.backgroundThread.submitRequest_responsiveBreakpoints(breakpoints.tablet, breakpoints.mobile);
-
-                let widgetInstanceList = {};
-                this.#buildWidgetInstanceList(FoxyApp.Model.widgetInstanceTree, widgetInstanceList);
-                this.#stylesheet.reset();
-                this.#stylesheet.build(widgetInstanceList);
-            }
+            this.updateSettings(e.wInstanceID, e.settingName, e.settingValue);
         }
         else if (e instanceof FoxyApp.Class.Event.Model.Selection)
         {
@@ -2477,10 +2514,22 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
         }
     }
 
+    initWidgetInstances()
+    {
+        let widgetInstanceList = {};
+        this.#buildWidgetInstanceList(widgetInstanceList);
+
+        FoxyApp.backgroundThread.submitRequest_widgetInstances(widgetInstanceList)
+
+        // TODO: Build canvas node tree from widget instance tree.
+
+        this.#stylesheet.build(widgetInstanceList);
+    }
+
     insertWidgetInstance(widgetInstance, targetID, insertBefore)
     {
         let widgetInstanceList = {};
-        this.#buildWidgetInstanceList(FoxyApp.Model.widgetInstanceTree, widgetInstanceList);
+        this.#buildWidgetInstanceList(widgetInstanceList);
 
         FoxyApp.backgroundThread.submitRequest_widgetInstances(widgetInstanceList)
 
@@ -2612,7 +2661,7 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
     deleteWidgetInstance(wInstanceID)
     {
         let widgetInstanceList = {};
-        this.#buildWidgetInstanceList(FoxyApp.Model.widgetInstanceTree, widgetInstanceList);
+        this.#buildWidgetInstanceList(widgetInstanceList);
         FoxyApp.backgroundThread.submitRequest_widgetInstances(widgetInstanceList)
 
         let canvasNodes = this.#canvasNodeMap[wInstanceID];
@@ -2628,6 +2677,114 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
         }
 
         this.#stylesheet.delete(wInstanceID);
+    }
+
+    updateSettings(wInstanceID, settingName, settingValue)
+    {
+        if (wInstanceID === 'S-siteSettings')
+        {
+            FoxyApp.backgroundThread.submitRequest_updateWidgetInstance(wInstanceID, settingName, settingValue);
+
+            if ([ 'breakpoints_tablet', 'breakpoints_mobile' ].includes(settingName))
+            {
+                this.#resizeIFrame();
+
+                let widgetInstanceList = {};
+                this.#buildWidgetInstanceList(widgetInstanceList);
+                this.#stylesheet.reset();
+                this.#stylesheet.build(widgetInstanceList);
+            }
+            else
+            {
+                let widgetInstance = FoxyApp.Model.widgetInstanceMap[wInstanceID];
+                let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetID];
+                let settingParams = widget.settings[settingName];
+                let cssChanged = settingParams.selector !== undefined || settingParams.selectors !== undefined;
+
+                if (cssChanged)
+                {
+                    this.#stylesheet.update(wInstanceID);
+                }
+
+                let varValue;
+
+                let match = /colors_global_(\d+)/.exec(settingName);
+                if (match !== null)
+                    varValue = `var(--foxybdr-global-color-${match[1]})`;
+
+                // TODO: Apply global fonts.
+
+                if (varValue !== undefined)
+                {
+                    this.#renderNodesAfterGlobalSettingUpdate(settingParams.type, varValue);
+                }
+            }
+        }
+    }
+
+    #renderNodesAfterGlobalSettingUpdate(controlType, varValue)
+    {
+        for (let id in this.#canvasNodeMap)
+        {
+            let nodeList = this.#canvasNodeMap[id];
+
+            for (let node of nodeList)
+            {
+                let widgetInstance = FoxyApp.Model.widgetInstanceMap[node.wInstanceID];
+
+                if (widgetInstance.data.widgetType !== 0)
+                    continue;
+
+                let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetID];
+
+                let render = false;
+
+                for (let sName in widget.settings)
+                {
+                    let settingParams = widget.settings[sName];
+
+                    if (settingParams.type !== controlType)
+                        continue;
+
+                    // TODO: Apply component settings in node.context here.
+                    // if (... === varValue) { render = true; break; }
+
+                    let sValue = widgetInstance.data.sparseSettings[sName];
+
+                    if (sValue !== undefined)
+                    {
+                        if (settingParams.responsive)
+                        {
+                            if (sValue.desktop === varValue || sValue.tablet === varValue || sValue.mobile === varValue)
+                            {
+                                render = true;
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            if (sValue === varValue)
+                            {
+                                render = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    if (sValue === undefined || (settingParams.responsive && sValue.desktop === undefined))
+                    {
+                        if (settingParams.default === varValue)
+                        {
+                            render = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (render)
+                    node.render(false);
+            }
+        }
     }
 
     selectWidgetInstance(wInstanceID)
@@ -2681,7 +2838,13 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
         this.#iFrameElement.parentElement.style.maxWidth = width;
     }
 
-    #buildWidgetInstanceList(node, list)
+    #buildWidgetInstanceList(list)
+    {
+        this.#_buildWidgetInstanceList(FoxyApp.Model.Settings.siteSettings, list);
+        this.#_buildWidgetInstanceList(FoxyApp.Model.widgetInstanceTree, list);
+    }
+
+    #_buildWidgetInstanceList(node, list)
     {
         if (node instanceof FoxyApp.Class.Model.WidgetInstance)
         {
@@ -2694,7 +2857,7 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
         }
 
         for (let childNode of node.children)
-            this.#buildWidgetInstanceList(childNode, list);
+            this.#_buildWidgetInstanceList(childNode, list);
     }
 
     #getResponsiveBreakpoints()
@@ -3349,29 +3512,6 @@ FoxyApp.Class.BackgroundThread = class extends FoxyApp.Class.UI.Component.BaseCo
         });
     }
 
-    submitRequest_responsiveBreakpoints(tablet, mobile)
-    {
-        for (let request of this.#requestQueue)
-        {
-            if (request.request.type === 'responsive-breakpoints')
-            {
-                request.request.tablet = tablet;
-                request.request.mobile = mobile;
-                return;
-            }
-        }
-
-        this.#submitRequest({
-            request: {
-                type: 'responsive-breakpoints',
-                tablet: tablet,
-                mobile: mobile
-            },
-            requester: null,
-            returnParams: null
-        });
-    }
-
     submitRequest_render(requester, wInstanceID, context, deep)
     {
         for (let request of this.#requestQueue)
@@ -3475,6 +3615,123 @@ FoxyApp.Class.BackgroundThread = class extends FoxyApp.Class.UI.Component.BaseCo
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// MEDIA UPLOADER
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+FoxyApp.Class.MediaUploader = class
+{
+    mediaUploader = null;
+    currentRequest = null;
+    #currentLibraryType = '';
+
+    show(requester, libraryType, libraryTitle, selectedID)
+    {
+        this.currentRequest = {
+            requester: requester,
+            libraryType: libraryType,  // e.g. 'image'
+            libraryTitle: libraryTitle,
+            selectedID: selectedID,
+            oldExtensions: _wpPluploadSettings.defaults.filters.mime_types[0].extensions
+        };
+
+        this.#doShow();
+    }
+
+    #doShow()
+    {
+        let _this = this;
+
+        if (FOXYAPP.uploadFileTypes.length > 0)
+        {
+            _wpPluploadSettings.defaults.filters.mime_types[0].extensions = _this.currentRequest.oldExtensions + ',' + FOXYAPP.uploadFileTypes.join(',');
+        }
+
+        if (this.mediaUploader === null || this.#currentLibraryType !== this.currentRequest.libraryType)
+        {
+            this.mediaUploader = wp.media({
+                button: {
+                    text: 'Select File',
+                },
+                multiple: false,
+                states: [new wp.media.controller.Library({
+                    title: 'Select ' + this.currentRequest.libraryTitle,
+                    library: wp.media.query({
+                        type: this.currentRequest.libraryType
+                    }),
+                    multiple: false,
+                    date: false
+                })]
+            });
+
+            this.mediaUploader.on('open',
+                function()
+                {
+                    let id = _this.currentRequest.selectedID;
+                    let selection = _this.mediaUploader.state().get('selection');
+
+                    if (id !== null)
+                    {
+                        selection.add(wp.media.attachment(id));
+                    }
+                    else
+                    {
+                        selection.remove(selection.models);
+                    }
+                }
+            );
+
+            this.mediaUploader.on('insert select',
+                function()
+                {
+                    let attachment = _this.mediaUploader.state().get('selection').first().toJSON();
+
+                    _this.currentRequest.requester.handleEvent({
+                        type: 'media-select',
+                        id: attachment.id,
+                        url: attachment.url
+                    });
+                }
+            );
+
+            this.mediaUploader.on('close',
+                function()
+                {
+                    _wpPluploadSettings.defaults.filters.mime_types[0].extensions = _this.currentRequest.oldExtensions;
+
+                    _this.onClose();
+                }
+            );
+
+            this.#currentLibraryType = this.currentRequest.libraryType;
+        }
+        
+        this.mediaUploader.open();
+
+        if (FOXYAPP.uploadFileTypes.length > 0)
+        {
+            this.mediaUploader.uploader.uploader.param('foxybdr-media-upload', 'foxybdr-upload-from-editor');
+        }
+    }
+
+    onClose()
+    {
+        let _this = this;
+
+        setTimeout(function() {
+            _this.currentRequest = null;
+        }, 1);
+    }
+
+    destroy()
+    {
+        this.mediaUploader = null;
+        this.currentRequest = null;
+    }
+};
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // "GLOBAL" OBJECTS AND VARIABLES
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -3483,6 +3740,7 @@ FoxyApp.templateID = -1;
 FoxyApp.widgetInstanceIdCounter = -1;
 FoxyApp.elementCache = null;
 FoxyApp.backgroundThread = null;
+FoxyApp.mediaUploader = null;
 
 FoxyApp.UI = {};
 FoxyApp.UI.panelResizer = null;
@@ -3534,6 +3792,8 @@ FoxyApp.Main = class
         FoxyApp.backgroundThread = new FoxyApp.Class.BackgroundThread();
         FoxyApp.backgroundThread.create();
 
+        FoxyApp.mediaUploader = new FoxyApp.Class.MediaUploader();
+
         FoxyApp.UI.panelResizer = new FoxyApp.Class.UI.Component.PanelResizer();
         FoxyApp.UI.panelResizer.create();
 
@@ -3571,6 +3831,44 @@ FoxyApp.Main = class
 
         FoxyApp.View.device = new FoxyApp.Class.View.Device();
         FoxyApp.View.device.create();
+
+        this.scheduleRefreshNonce();
+    }
+
+    scheduleRefreshNonce(milliseconds = 3600 * 1000)
+    {
+        var self = this;
+
+        setTimeout(function() {
+            self.refreshNonce();
+        }, milliseconds);
+    }
+
+    refreshNonce()
+    {
+        var self = this;
+
+        FoxyBuilder.Ajax.fetch('foxybdr_editor_refresh_nonce', {
+            nonce: FOXYAPP.nonce
+        })
+        .then(function(response) {
+            if (response.ok)
+                return response.json();
+            else
+                throw new Error('');
+        })
+        .then(function(data) {
+            if (data.status === 'OK')
+            {
+                FOXYAPP.nonce = data.nonce;
+                self.scheduleRefreshNonce();
+            }
+            else
+                throw new Error('');
+        })
+        .catch(function(e) {
+            FoxyBuilder.showNonceErrorDialog();
+        });
     }
 };
 

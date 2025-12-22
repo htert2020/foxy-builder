@@ -35,6 +35,8 @@ abstract class BaseWidget
 
     protected static $CONTROL_TYPE_TEXTAREA = 'TEXTAREA';
 
+    protected static $CONTROL_TYPE_WYSIWYG = 'WYSIWYG';
+
     protected static $CONTROL_TYPE_SELECT = 'SELECT';
 
     protected static $CONTROL_TYPE_CHOOSE = 'CHOOSE';
@@ -46,6 +48,12 @@ abstract class BaseWidget
     protected static $CONTROL_TYPE_SLIDER = 'SLIDER';
 
     protected static $CONTROL_TYPE_DIMENSIONS = 'DIMENSIONS';
+
+    protected static $CONTROL_TYPE_URL = 'URL';
+
+    protected static $CONTROL_TYPE_COLOR = 'COLOR';
+
+    protected static $CONTROL_TYPE_MEDIA = 'MEDIA';
 
     protected $title = '';
 

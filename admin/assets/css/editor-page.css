@@ -14,6 +14,7 @@ body {  /* CONFIGURABLE CSS VARIABLES */
 	--foxybdr-popup-input-bg-color: #505050;
 	--foxybdr-popup-input-t-color: #c0c0c0;
 	--foxybdr-popup-input-p-color: #808080;
+	--foxybdr-popup-shadow: 0px 0px 4px 2px rgba(255, 255, 255, 0.2);
 	--foxybdr-resizer-width: 8px;
 	--foxybdr-resizer-bg-color: #505050;
 	--foxybdr-resizer-button-t-color: #c0c0c0;
@@ -195,6 +196,10 @@ select:focus {
 					background-color: var(--foxybdr-resizer-bg-color);
 				}
 
+				body.mce-fullscreen #foxybdr-panel-resizer {
+					display: none;
+				}
+
 				#foxybdr-panel-resizer-button {
 					position: absolute;
 					left: 100%;
@@ -213,6 +218,10 @@ select:focus {
 
 				#foxybdr-panel-resizer-button:hover {
 					opacity: 1.0;
+				}
+
+				body.mce-fullscreen #foxybdr-panel-resizer-button {
+					display: none;
 				}
 
 					#foxybdr-panel-resizer-button .dashicons {
@@ -263,6 +272,10 @@ select:focus {
 			min-width: var(--foxybdr-resizer-width);
 			height: 100%;
 			z-index: 10;
+		}
+
+		body.mce-fullscreen #foxybdr-drawer-resizable-backplate {
+			display: none;
 		}
 
 			#foxybdr-drawer-resizer {
@@ -436,13 +449,28 @@ select:focus {
 					gap: 8px;
 					padding: 16px;
 					overflow-y: clip;
-					transition: all linear 0.2s;
+					transition-property: height, padding;
+					transition-timing-function: linear;
+					transition-duration: 0.2s;
 				}
 
 				.foxybdr-settings-module .foxybdr-tab-page-section:not(.foxybdr-active) > .foxybdr-body {
 					height: 0px;
 					padding: 0px;
 				}
+
+				.foxybdr-settings-module .foxybdr-tab-page-section.foxybdr-show-overflow > .foxybdr-body {
+					overflow-y: visible;
+				}
+
+					.foxybdr-settings-module .foxybdr-tab-page-section > .foxybdr-body > .foxybdr-separator {
+						width: 100%;
+						height: 1px;
+						margin: 8px 0px;
+						border-style: solid;
+						border-color: var(--foxybdr-general-br-color);
+						border-width: 1px 0px 0px 0px;
+					}
 
 .foxybdr-widgets-module {
 	position: absolute;
@@ -580,17 +608,57 @@ select:focus {
 
 /* BEGIN TINYMCE WYSIWYG **************************************************************/
 
-.mce-tinymce {
+.foxybdr-control .mce-tinymce {
     border-radius: 4px;
 }
 
-.mce-container.mce-flow-layout-item > div {
+.foxybdr-control .mce-panel {
+    border: 0 solid var(--foxybdr-general-br-color);
+    background-color: var(--foxybdr-general-bg-color);
+}
+
+.foxybdr-control .mce-toolbar .mce-btn-group {
+    padding: 8px 6px 4px 8px;
+}
+
+.foxybdr-control .mce-btn {
+    border-radius: 4px;
+    background: var(--foxybdr-input-bg-color);
+}
+
+.foxybdr-control .mce-btn-group .mce-btn {
+    margin-left: 0px;
+	margin-right: 4px;
+	margin-bottom: 4px;
+}
+
+.foxybdr-control .mce-ico {
+    color: var(--foxybdr-input-p-color);
+}
+
+.foxybdr-control .mce-ico.mce-i-backcolor {
+	color: var(--foxybdr-input-bg-color);
+}
+
+.foxybdr-control i.mce-i-backcolor {
+    background: var(--foxybdr-input-p-color);
+}
+
+.foxybdr-control .mce-btn .mce-txt {
+    color: var(--foxybdr-input-p-color);
+}
+
+.foxybdr-control .mce-container.mce-flow-layout-item > div {
     white-space: normal;
 }
 
 .mce-colorbutton-grid .mce-custom-color-btn button {
     color: #0080ff;
     text-decoration: underline;
+}
+
+.foxybdr-control .mce-edit-area iframe {
+	border-radius: 0px 0px 4px 4px;
 }
 
 /* END TINYMCE WYSIWYG **************************************************************/

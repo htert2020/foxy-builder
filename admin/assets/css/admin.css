@@ -26,6 +26,10 @@ body.foxybdr-wait {
     filter: opacity(50%);
 }
 
+body.foxybdr-wait.foxybdr-wait.foxybdr-wait.foxybdr-wait.foxybdr-wait * {
+    cursor: wait;
+}
+
 #adminmenu #toplevel_page_foxybuilder div.wp-menu-image:before {
     content: "\f102";
     font-family: foxybuilder;

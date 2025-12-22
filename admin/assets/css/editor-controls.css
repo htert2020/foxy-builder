@@ -17,7 +17,6 @@
     }
 
         .foxybdr-control-prompt > div:nth-child(1) {
-            z-index: 10;  /* For responsive dropdown */
             display: flex;
             align-items: flex-start;
             gap: 8px;
@@ -56,6 +55,7 @@
                     left: 100%;
                     top: 50%;
                     transform: translate(0%, -50%);
+                    z-index: 10;
                     display: none;
                     border-radius: 2px;
                     background-color: var(--foxybdr-popup-input-bg-color);
@@ -129,7 +129,7 @@
                     color: var(--foxybdr-input-t-color);
                 }
 
-        .foxybdr-control-input {
+    .foxybdr-control-input {
         width: 50%;
         display: flex;
         justify-content: flex-end;
@@ -137,6 +137,7 @@
 
     .foxybdr-control.foxybdr-control-multirow .foxybdr-control-input {
         width: 100%;
+        padding-top: 4px;
     }
 
 .foxybdr-input-text {
@@ -171,6 +172,24 @@
 }
 
 .foxybdr-input-textarea::placeholder {
+    color: var(--foxybdr-input-p-color);
+}
+
+.foxybdr-input-wysiwyg {
+    width: 100%;
+    height: 250px;
+    border-width: 0px;
+    border-radius: 4px;
+    padding: 8px;
+    background-color: var(--foxybdr-input-bg-color);
+    color: var(--foxybdr-input-t-color);
+    font-family: var(--foxybdr-general-font);
+    font-size: 12px;
+    font-weight: normal;
+    line-height: 1.2;
+}
+
+.foxybdr-input-wysiwyg::placeholder {
     color: var(--foxybdr-input-p-color);
 }
 
@@ -492,3 +511,386 @@
             bottom: 0%;
         }
 
+.foxybdr-input-url {
+    width: 100%;
+    border-width: 0px;
+    border-radius: 4px;
+    padding: 8px;
+    background-color: var(--foxybdr-input-bg-color);
+    color: var(--foxybdr-input-t-color);
+    font-family: var(--foxybdr-general-font);
+    font-size: 12px;
+    font-weight: normal;
+    line-height: 1.0;
+}
+
+.foxybdr-input-url::placeholder {
+    color: var(--foxybdr-input-p-color);
+}
+
+.foxybdr-input-color {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    gap: 4px;
+}
+
+    .foxybdr-input-color > div {  /* The buttons. */
+        position: relative;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-width: 0px;
+        border-radius: 4px;
+        background-color: var(--foxybdr-input-bg-color);
+        color: var(--foxybdr-popup-input-bg-color);
+        font-size: 12px;
+        line-height: 1.0;
+        cursor: pointer;
+    }
+
+    .foxybdr-input-color .foxybdr-global-button.foxybdr-enabled {
+        background-color: var(--foxybdr-popup-input-bg-color);
+        color: var(--foxybdr-input-t-color);
+    }
+
+    .foxybdr-input-color .foxybdr-global-button:hover {
+        color: var(--foxybdr-input-t-color);
+    }
+
+    .foxybdr-input-color.foxybdr-is-global .foxybdr-global-button {
+        display: none;
+    }
+
+        .foxybdr-input-color .foxybdr-global-button > .dashicons {
+            position: relative;
+            left: 1px;
+            top: 1px;
+        }
+
+    .foxybdr-input-color .foxybdr-color-button {
+        --foxybdr-color: transparent;
+    }
+
+    .foxybdr-input-color .foxybdr-color-button.foxybdr-enabled {
+        background-color: var(--foxybdr-color);
+    }
+
+        .foxybdr-input-color .foxybdr-color-button > img {
+            width: 100%;
+            height: 100%;
+            border-radius: 4px;
+        }
+
+        .foxybdr-input-color .foxybdr-color-button.foxybdr-enabled > img {
+            display: none;
+        }
+
+        .foxybdr-input-color .foxybdr-global-dropdown {
+            width: 200px;
+            max-height: 260px;
+        }
+
+            .foxybdr-input-color .foxybdr-global-dropdown .foxybdr-body {
+                padding: 0px;
+                overflow-y: auto;
+                scrollbar-width: thin;
+                scroll-behavior: smooth;
+                scrollbar-color: #80808040 #ffffff20;
+            }
+
+        .foxybdr-input-color .foxybdr-custom-dropdown {
+            width: 246px;
+        }
+
+            .foxybdr-input-color.foxybdr-is-global .foxybdr-custom-dropdown .foxybdr-title-bar .dashicons.dashicons-trash {
+                display: none;
+            }
+
+.foxybdr-input-color-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+    .foxybdr-input-color-picker > div:not(.foxybdr-code-container) {
+        position: relative;
+        cursor: pointer;
+    }
+
+    .foxybdr-input-color-picker .foxybdr-main-track {
+        height: 150px;
+    }
+
+    .foxybdr-input-color-picker .foxybdr-hue-track {
+        height: 8px;
+        border-radius: 4px;
+        background-image: url('../images/control_color_hue.jpg');
+        background-position: 0% 0%;
+        background-size: 100% 100%;
+    }
+
+    .foxybdr-input-color-picker .foxybdr-opacity-track {
+        height: 8px;
+        border-radius: 4px;
+        background-image: url('../images/control_color_opacity.png');
+        background-position: 0% 0%;
+        background-size: 100% 100%;
+    }
+
+        .foxybdr-input-color-picker > div > canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .foxybdr-input-color-picker .foxybdr-handle {
+            position: absolute;
+            left: var(--foxybdr-position-x);
+            top: var(--foxybdr-position-y);
+            width: 18px;
+            height: 18px;
+            border: 2px solid #c0c0c0;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            --foxybdr-position-x: 0%;
+            --foxybdr-position-y: 0%;
+        }
+
+        .foxybdr-input-color-picker .foxybdr-hue-track .foxybdr-handle,
+        .foxybdr-input-color-picker .foxybdr-opacity-track .foxybdr-handle {
+            top: 50%;
+        }
+
+        .foxybdr-input-color-picker input[type="text"] {
+            width: 100%;
+            flex-grow: 0;
+            flex-shrink: 0;
+            border-width: 0px;
+            border-radius: 4px;
+            padding: 8px;
+            background-color: var(--foxybdr-input-bg-color);
+            color: var(--foxybdr-input-t-color);
+            font-family: var(--foxybdr-general-font);
+            font-size: 12px;
+            font-weight: normal;
+            line-height: 1.0;
+            text-transform: uppercase;
+        }
+
+        .foxybdr-input-color-picker .foxybdr-code-buttons {
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            flex-grow: 1;
+            flex-shrink: 1;
+            padding-top: 8px;
+        }
+
+            .foxybdr-input-color-picker .foxybdr-code-buttons > span {
+                color: var(--foxybdr-popup-input-bg-color);
+                font-family: var(--foxybdr-general-font);
+                font-size: 10px;
+                line-height: 1.0;
+                cursor: pointer;
+            }
+
+            .foxybdr-input-color-picker .foxybdr-code-buttons > span.foxybdr-selected {
+                color: var(--foxybdr-input-t-color);
+            }
+
+            .foxybdr-input-color-picker .foxybdr-code-buttons > span:hover {
+                color: var(--foxybdr-input-t-color);
+            }
+
+.foxybdr-input-color-global-row {
+    display: flex;
+    cursor: pointer;
+    --foxybdr-column-1-width: 32px;
+    --foxybdr-column-3-width: 32px;
+}
+
+.foxybdr-input-color-global-row.foxybdr-selected {
+    background-color: var(--foxybdr-input-bg-color);
+}
+
+.foxybdr-input-color-global-row:not(.foxybdr-selected):hover {
+    background-color: #2c2c2c;
+}
+
+    .foxybdr-input-color-global-row > div {
+        padding: 8px;
+    }
+
+    .foxybdr-input-color-global-row > div:nth-child(1) {
+        width: var(--foxybdr-column-1-width);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+        .foxybdr-input-color-global-row > div:nth-child(1) > div {
+            width: 16px;
+            height: 16px;
+            border-width: 0px;
+            border-radius: 2px;
+        }
+
+    .foxybdr-input-color-global-row > div:nth-child(2) {
+        width: calc(100% - var(--foxybdr-column-1-width) - var(--foxybdr-column-3-width));
+        display: flex;
+        align-items: center;
+        padding-left: 0px;
+        overflow-x: hidden;
+    }
+
+        .foxybdr-input-color-global-row > div:nth-child(2) > span {
+            color: var(--foxybdr-popup-input-bg-color);
+            font-size: 12px;
+            line-height: 1.0;
+            white-space: nowrap;
+        }
+
+        .foxybdr-input-color-global-row.foxybdr-selected > div:nth-child(2) > span,
+        .foxybdr-input-color-global-row:hover > div:nth-child(2) > span {
+            color: var(--foxybdr-input-t-color);
+        }
+
+    .foxybdr-input-color-global-row > div:nth-child(3) {
+        width: var(--foxybdr-column-3-width);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+        .foxybdr-input-color-global-row > div:nth-child(3) > span {
+            color: var(--foxybdr-input-t-color);
+            font-size: 16px;
+            line-height: 1.0;
+            visibility: hidden;
+        }
+
+        .foxybdr-input-color-global-row.foxybdr-selected > div:nth-child(3) > span {
+            visibility: visible;
+        }
+
+.foxybdr-control-dropdown {
+    position: absolute;
+    right: 0px;
+    top: calc(100% + 8px);
+    width: 200px;
+    z-index: 10;
+    display: none;
+    flex-direction: column;
+    border-radius: 4px;
+    background-color: var(--foxybdr-general-bg-color);
+    color: var(--foxybdr-general-t-color);
+    line-height: 1.0;
+    box-shadow: var(--foxybdr-popup-shadow);
+    cursor: default;
+}
+
+.foxybdr-control-dropdown.foxybdr-show {
+    display: flex;
+}
+
+    .foxybdr-control-dropdown .foxybdr-title-bar {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px;
+        border-style: solid;
+        border-color: var(--foxybdr-general-br-color);
+        border-width: 0px 0px 1px 0px;
+    }
+
+        .foxybdr-control-dropdown .foxybdr-title-bar > div {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+            .foxybdr-control-dropdown .foxybdr-title-bar .foxybdr-title {
+                font-size: 12px;
+            }
+
+            .foxybdr-control-dropdown .foxybdr-title-bar .dashicons {
+                display: block;
+                border-radius: 2px;
+                padding: 2px;
+                color: var(--foxybdr-popup-input-bg-color);
+                font-size: 14px;
+                cursor: pointer;
+            }
+
+            .foxybdr-control-dropdown .foxybdr-title-bar .dashicons:hover {
+                background-color: var(--foxybdr-popup-input-bg-color);
+                color: var(--foxybdr-input-t-color);
+            }
+
+    .foxybdr-control-dropdown .foxybdr-body {
+        padding: 8px;
+    }
+
+.foxybdr-input-media {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 300 / 128;
+    background-image: none;
+    background-size: cover;
+    background-position: center;
+    background-color: var(--foxybdr-input-bg-color);
+    cursor: pointer;
+    --foxybdr-background-image-url: none;
+}
+
+.foxybdr-input-media.foxybdr-assigned {
+    background-image: var(--foxybdr-background-image-url);
+}
+
+    .foxybdr-input-media > .dashicons {
+        position: absolute;
+        width: auto;
+        height: auto;
+        display: block;
+        border-radius: 2px;
+        padding: 2px;
+        color: var(--foxybdr-popup-input-bg-color);
+        line-height: 1.0;
+        cursor: pointer;
+        transition: all linear 0.2s;
+    }
+
+    .foxybdr-input-media .dashicons-insert {
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 20px;
+    }
+
+    .foxybdr-input-media.foxybdr-assigned .dashicons-insert {
+        display: none;
+    }
+
+    .foxybdr-input-media:hover .dashicons-insert {
+        color: var(--foxybdr-input-t-color);
+    }
+
+    .foxybdr-input-media .dashicons-trash {
+        right: 4px;
+        top: 4px;
+        display: none;
+        background-color: var(--foxybdr-general-bg-color);
+        color: var(--foxybdr-input-t-color);
+        font-size: 16px;
+        opacity: 0.0;
+    }
+
+    .foxybdr-input-media.foxybdr-assigned .dashicons-trash {
+        display: block;
+    }
+
+    .foxybdr-input-media:hover .dashicons-trash {
+        opacity: 1.0;
+    }
