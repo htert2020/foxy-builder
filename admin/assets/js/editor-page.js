@@ -47,6 +47,11 @@ FoxyApp.Function.navigateToGlobalColors = function()
     FoxyApp.View.PanelModule.siteSettingsModule.navigateToGlobalColors();
 }
 
+FoxyApp.Function.navigateToGlobalFonts = function()
+{
+    FoxyApp.View.PanelModule.siteSettingsModule.navigateToGlobalFonts();
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CLASSES
@@ -2185,6 +2190,13 @@ FoxyApp.Class.View.PanelModule.SiteSettingsModule = class extends FoxyApp.Class.
 
         FoxyApp.Manager.panelManager.activate(this);
     }
+
+    navigateToGlobalFonts()
+    {
+        this.activateTabPageByName('fonts');
+
+        FoxyApp.Manager.panelManager.activate(this);
+    }
 };
 
 FoxyApp.Class.View.PanelModule.PropertiesModule = class extends FoxyApp.Class.UI.Component.PanelModule.SettingsModule
@@ -2304,6 +2316,8 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
 
     #contextMenu = null;
 
+    #googleFontLoader = null;
+
     constructor()
     {
         super();
@@ -2371,6 +2385,12 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
             this.registerEvent(this.#iFrameElement.contentWindow, 'keyup');
             this.registerEvent(window, 'keyup');
         }
+
+        this.installAssets();
+
+        this.#googleFontLoader = new FoxyApp.Class.GoogleFontLoader();
+        this.#googleFontLoader.create(this.#iFrameElement.contentDocument, 0);
+        this.#googleFontLoader.registerClient(this);
 
         this.initWidgetInstances();
     }
@@ -2468,6 +2488,26 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
         }
 
         /* END - CONTEXT MENU RELATED EVENTS */
+
+        else if (e.type === 'background-thread-response')
+        {
+            if (e.request.type === 'find-google-fonts')
+            {
+                this.#googleFontLoader.requestFonts(this, e.response.fontIds);
+            }
+            else if (e.request.type === 'find-global-dependencies')
+            {
+                for (let wInstanceID of e.response.wInstanceIDs)
+                {
+                    let nodeList = this.#canvasNodeMap[wInstanceID];
+
+                    for (let node of nodeList)
+                    {
+                        node.render(false);
+                    }
+                }
+            }
+        }
     }
 
     #onContextMenuCommand(contextMenuCommand, wInstanceID)
@@ -2514,6 +2554,65 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
         }
     }
 
+    installAssets()
+    {
+        let frameDocument = this.#iFrameElement.contentDocument;
+        let headElement = frameDocument.querySelector('head');
+
+        for (let group in FOXYAPP.assets.fonts)
+        {
+            if (group === 'google')
+                continue;
+
+            let fontList = FOXYAPP.assets.fonts[group].font_list;
+
+            for (let font of fontList)
+            {
+                if (typeof font === 'string' || font.css_url === undefined)
+                    continue;
+
+                let existingLinkElement = frameDocument.querySelector(`link[foxybdr-asset="foxybdr-font"][foxybdr-font-group="${group}"][foxybdr-font-id="${font.id}"]`);
+                if (existingLinkElement !== null)
+                    continue;
+
+                let linkElement = document.createElement('link');
+                linkElement.setAttribute('href', font.css_url);
+                linkElement.setAttribute('rel', 'stylesheet');
+                linkElement.setAttribute('type', 'text/css');
+                linkElement.setAttribute('foxybdr-asset', 'foxybdr-font');
+                linkElement.setAttribute('foxybdr-font-group', group);
+                linkElement.setAttribute('foxybdr-font-id', String(font.id));
+                headElement.appendChild(linkElement);
+            }
+        }
+
+        let existingLinkElement = frameDocument.querySelector(`link[foxybdr-asset="foxybdr-icons-fa"]`);
+        if (existingLinkElement === null)
+        {
+            let linkElement = document.createElement('link');
+            linkElement.setAttribute('href', FOXYAPP.assets.fontAwesomeCssUrl);
+            linkElement.setAttribute('rel', 'stylesheet');
+            linkElement.setAttribute('type', 'text/css');
+            linkElement.setAttribute('foxybdr-asset', 'foxybdr-icons-fa');
+            headElement.appendChild(linkElement);
+        }
+
+        for (let libName in FOXYAPP.assets.iconLibraries)
+        {
+            let existingLinkElement = frameDocument.querySelector(`link[foxybdr-asset="foxybdr-icons"][foxybdr-icons-library="${libName}"]`);
+            if (existingLinkElement !== null)
+                continue;
+
+            let linkElement = document.createElement('link');
+            linkElement.setAttribute('href', FOXYAPP.assets.iconLibraries[libName].css_url);
+            linkElement.setAttribute('rel', 'stylesheet');
+            linkElement.setAttribute('type', 'text/css');
+            linkElement.setAttribute('foxybdr-asset', 'foxybdr-icons');
+            linkElement.setAttribute('foxybdr-icons-library', libName);
+            headElement.appendChild(linkElement);
+        }
+    }
+
     initWidgetInstances()
     {
         let widgetInstanceList = {};
@@ -2524,6 +2623,8 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
         // TODO: Build canvas node tree from widget instance tree.
 
         this.#stylesheet.build(widgetInstanceList);
+
+        FoxyApp.backgroundThread.submitRequest_findGoogleFonts(this);
     }
 
     insertWidgetInstance(widgetInstance, targetID, insertBefore)
@@ -2620,6 +2721,8 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
         }
 
         this.#stylesheet.build(widgetInstanceList);
+
+        FoxyApp.backgroundThread.submitRequest_findGoogleFonts(this);
     }
 
     updateWidgetInstance(wInstanceID, settingName, settingValue)
@@ -2650,6 +2753,8 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
                     {
                         this.#stylesheet.update(wInstanceID);
                     }
+
+                    FoxyApp.backgroundThread.submitRequest_findGoogleFonts(this);
                 }
                 break;
 
@@ -2677,6 +2782,8 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
         }
 
         this.#stylesheet.delete(wInstanceID);
+
+        FoxyApp.backgroundThread.submitRequest_findGoogleFonts(this);
     }
 
     updateSettings(wInstanceID, settingName, settingValue)
@@ -2706,83 +2813,14 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
                     this.#stylesheet.update(wInstanceID);
                 }
 
-                let varValue;
-
-                let match = /colors_global_(\d+)/.exec(settingName);
-                if (match !== null)
-                    varValue = `var(--foxybdr-global-color-${match[1]})`;
-
-                // TODO: Apply global fonts.
-
-                if (varValue !== undefined)
+                let match1 = /colors_global_(\d+)/.exec(settingName);
+                let match2 = /fonts_global_(\d+)/.exec(settingName);
+                if (match1 !== null || match2 !== null)
                 {
-                    this.#renderNodesAfterGlobalSettingUpdate(settingParams.type, varValue);
-                }
-            }
-        }
-    }
-
-    #renderNodesAfterGlobalSettingUpdate(controlType, varValue)
-    {
-        for (let id in this.#canvasNodeMap)
-        {
-            let nodeList = this.#canvasNodeMap[id];
-
-            for (let node of nodeList)
-            {
-                let widgetInstance = FoxyApp.Model.widgetInstanceMap[node.wInstanceID];
-
-                if (widgetInstance.data.widgetType !== 0)
-                    continue;
-
-                let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetID];
-
-                let render = false;
-
-                for (let sName in widget.settings)
-                {
-                    let settingParams = widget.settings[sName];
-
-                    if (settingParams.type !== controlType)
-                        continue;
-
-                    // TODO: Apply component settings in node.context here.
-                    // if (... === varValue) { render = true; break; }
-
-                    let sValue = widgetInstance.data.sparseSettings[sName];
-
-                    if (sValue !== undefined)
-                    {
-                        if (settingParams.responsive)
-                        {
-                            if (sValue.desktop === varValue || sValue.tablet === varValue || sValue.mobile === varValue)
-                            {
-                                render = true;
-                                break;
-                            }
-                        }
-                        else
-                        {
-                            if (sValue === varValue)
-                            {
-                                render = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (sValue === undefined || (settingParams.responsive && sValue.desktop === undefined))
-                    {
-                        if (settingParams.default === varValue)
-                        {
-                            render = true;
-                            break;
-                        }
-                    }
+                    FoxyApp.backgroundThread.submitRequest_findGlobalDependencies(this, settingName);
                 }
 
-                if (render)
-                    node.render(false);
+                FoxyApp.backgroundThread.submitRequest_findGoogleFonts(this);
             }
         }
     }
@@ -2910,6 +2948,13 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
         {
             this.#contextMenu.destroy();
             this.#contextMenu = null;
+        }
+
+        if (this.#googleFontLoader !== null)
+        {
+            this.#googleFontLoader.unregisterClient(this);
+            this.#googleFontLoader.destroy();
+            this.#googleFontLoader = null;
         }
     }
 };
@@ -3057,7 +3102,16 @@ FoxyApp.Class.View.Canvas_Node = class extends FoxyApp.Class.ElementNode
     {
         if (e.type === 'background-thread-response')
         {
+            for (let id of e.response.imageUrlFaults)
+            {
+                FoxyApp.imageUrlLoader.requestImageUrls(this, id);
+            }
+
             this.#doRender(e.returnParams.deep, e.response.renderHTML);
+        }
+        else if (e.type === 'image-url-loaded')
+        {
+            this.render(false);
         }
     }
 
@@ -3462,6 +3516,7 @@ FoxyApp.Class.BackgroundThread = class extends FoxyApp.Class.UI.Component.BaseCo
         this.#worker.postMessage({
             type: 'init',
             controlDefaultValues: FoxyControls.controlDefaultValues,
+            groupControls: FOXYAPP.groupControls,
             widgets: FOXYAPP.widgets
         });
     }
@@ -3516,7 +3571,7 @@ FoxyApp.Class.BackgroundThread = class extends FoxyApp.Class.UI.Component.BaseCo
     {
         for (let request of this.#requestQueue)
         {
-            if (request.requester === requester)
+            if (request.request.type === 'render' && request.requester === requester)
             {
                 request.request.context = context;
 
@@ -3565,6 +3620,56 @@ FoxyApp.Class.BackgroundThread = class extends FoxyApp.Class.UI.Component.BaseCo
         });
     }
 
+    submitRequest_cacheImageUrls(id, imageUrls)
+    {
+        this.#submitRequest({
+            request: {
+                type: 'cache-image-urls',
+                id: id,
+                imageUrls: imageUrls
+            },
+            requester: null,
+            returnParams: null
+        });
+    }
+
+    submitRequest_findGoogleFonts(requester)
+    {
+        for (let request of this.#requestQueue)
+        {
+            if (request.request.type === 'find-google-fonts' && request.requester === requester)
+                return;
+        }
+
+        this.#submitRequest({
+            request: {
+                type: 'find-google-fonts'
+            },
+            requester: requester,
+            returnParams: {
+            }
+        });
+    }
+
+    submitRequest_findGlobalDependencies(requester, settingName)
+    {
+        for (let request of this.#requestQueue)
+        {
+            if (request.request.type === 'find-global-dependencies' && request.requester === requester && request.request.settingName === settingName)
+                return;
+        }
+
+        this.#submitRequest({
+            request: {
+                type: 'find-global-dependencies',
+                settingName: settingName
+            },
+            requester: requester,
+            returnParams: {
+            }
+        });
+    }
+
     #submitRequest(request)
     {
         this.#requestQueue.unshift(request);
@@ -3592,6 +3697,7 @@ FoxyApp.Class.BackgroundThread = class extends FoxyApp.Class.UI.Component.BaseCo
             this.#currentRequest.requester.handleEvent({
                 type: 'background-thread-response',
                 returnParams: this.#currentRequest.returnParams,
+                request: this.#currentRequest.request,
                 response: e.data
             });
         }
@@ -3610,6 +3716,100 @@ FoxyApp.Class.BackgroundThread = class extends FoxyApp.Class.UI.Component.BaseCo
             this.#worker.terminate();
             this.#worker = null;
         }
+    }
+};
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// IMAGE URL LOADER
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+FoxyApp.Class.ImageUrlLoader = class
+{
+    #imageIds = {};
+    #isProcessing = false;
+
+    requestImageUrls(requester, id)
+    {
+        let idStr = String(id);
+
+        if (this.#imageIds[idStr] === undefined)
+            this.#imageIds[idStr] = [];
+
+        if (this.#imageIds[idStr].includes(requester))
+            return;
+
+        this.#imageIds[idStr].push(requester);
+
+        this.#sendBatchRequestIfReady();
+    }
+
+    #sendBatchRequestIfReady()
+    {
+        if (this.#isProcessing === true || Object.keys(this.#imageIds).length === 0)
+            return;
+
+        this.#isProcessing = true;
+        
+        let imageIds = [];
+
+        for (let idStr in this.#imageIds)
+            imageIds.push(Number(idStr));
+
+        var self = this;
+
+        FoxyBuilder.Ajax.fetch('foxybdr_editor_get_image_urls', {
+            id_list: JSON.stringify(imageIds),
+            nonce: FOXYAPP.nonce
+        })
+        .then(function(response) {
+            if (response.ok)
+                return response.json();
+            else
+                throw new Error('');
+        })
+        .then(function(data) {
+            if (data.status === 'OK')
+            {
+                self.onBatchResponse(data.images);
+            }
+            else
+                throw new Error('');
+        })
+        .catch(function(e) {
+            FoxyBuilder.showNonceErrorDialog();
+        });
+    }
+
+    onBatchResponse(images)
+    {
+        for (let idStr in images)
+        {
+            FoxyApp.backgroundThread.submitRequest_cacheImageUrls(Number(idStr), images[idStr]);
+
+            if (this.#imageIds[idStr] !== undefined)
+            {
+                for (let requester of this.#imageIds[idStr])
+                {
+                    requester.handleEvent({
+                        type: 'image-url-loaded',
+                        id: Number(idStr)
+                    });
+                }
+
+                delete this.#imageIds[idStr];
+            }
+        }
+
+        this.#isProcessing = false;
+
+        this.#sendBatchRequestIfReady();
+    }
+
+    destroy()
+    {
+        this.#imageIds = {};
     }
 };
 
@@ -3732,6 +3932,174 @@ FoxyApp.Class.MediaUploader = class
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// GOOGLE FONT LOADER
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+FoxyApp.Class.GoogleFontLoader = class
+{
+    #headElement = null;
+
+    /* #fontMap: Maps Google font names to info objects containing: (1) Last usage timestamp, (2) Reference to the <link> element pointing
+     * to the font's CSS resource. */
+    #fontMap = {};
+
+    #clients = [];
+
+    #preloadedFontIds = [];
+
+    #cacheSize = 0;
+
+    create(document, cacheSize)
+    {
+        this.#headElement = document.querySelector('head');
+
+        let linkElements = document.querySelectorAll('link[foxybdr-asset="foxybdr-google-font-list"]');
+
+        for (let i = 0; i < linkElements.length; i++)
+        {
+            let fontIdListStr = linkElements[i].getAttribute('foxybdr-font-list');
+            let fontIdList = fontIdListStr.split('|');
+
+            for (let fontId of fontIdList)
+            {
+                this.#preloadedFontIds.push(fontId);
+            }
+        }
+
+        this.#cacheSize = cacheSize;
+    }
+
+    registerClient(client)
+    {
+        this.#clients.push({
+            client: client,
+            fontIds: []
+        });
+    }
+
+    unregisterClient(client)
+    {
+        for (let i = 0; i < this.#clients.length; i++)
+        {
+            if (this.#clients[i].client === client)
+            {
+                this.#clients.splice(i, 1);
+                break;
+            }
+        }
+
+        this.#loadFonts();
+    }
+
+    requestFonts(client, fontIds)
+    {
+        for (let item of this.#clients)
+        {
+            if (item.client === client)
+            {
+                item.fontIds = fontIds;
+                break;
+            }
+        }
+
+        this.#loadFonts();
+    }
+
+    #loadFonts()
+    {
+        let idMap = {};
+
+        for (let item of this.#clients)
+        {
+            for (let id of item.fontIds)
+            {
+                idMap[id] = 1;
+            }
+        }
+
+        let fontIds = Object.keys(idMap);
+
+        for (let fontId of fontIds)
+        {
+            if (this.#preloadedFontIds.includes(fontId))
+                continue;
+
+            if (this.#fontMap[fontId] === undefined)
+            {
+                let url = this.#buildFontUrl(fontId);
+
+                let linkElement = document.createElement('link');
+                linkElement.setAttribute('href', url);
+                linkElement.setAttribute('rel', 'stylesheet');
+                linkElement.setAttribute('type', 'text/css');
+                linkElement.setAttribute('crossorigin', 'anonymous');
+
+                this.#headElement.appendChild(linkElement);
+
+                this.#fontMap[fontId] = {
+                    timestamp: Date.now(),
+                    linkElement: linkElement
+                };
+            }
+            else
+            {
+                this.#fontMap[fontId].timestamp = Date.now();
+            }
+        }
+
+        let oldFonts = [];
+
+        for (let fontId in this.#fontMap)
+        {
+            if (fontIds.includes(fontId))
+                continue;
+
+            oldFonts.push({
+                fontId: fontId,
+                timestamp: this.#fontMap[fontId].timestamp
+            });
+        }
+
+        oldFonts.sort((a, b) => { return a.timestamp - b.timestamp; });
+
+        let numToDelete = oldFonts.length - this.#cacheSize;
+
+        if (numToDelete <= 0)
+            return;
+
+        for (let i = 0; i < numToDelete; i++)
+        {
+            let font = oldFonts.shift();
+
+            this.#fontMap[font.fontId].linkElement.remove();
+
+            delete this.#fontMap[font.fontId];
+        }
+    }
+
+    #buildFontUrl(fontId)
+    {
+        let encodedFontId = fontId.replaceAll(' ', '%20');
+
+        return `https://fonts.googleapis.com/css?family=${encodedFontId}:100,100italic,200,200italic,300,300italic,400,400italic,500,500italic,600,600italic,700,700italic,800,800italic,900,900italic`;
+    }
+
+    destroy()
+    {
+        this.#headElement = null;
+
+        for (let fontId in this.#fontMap)
+            this.#fontMap[fontId].linkElement.remove();
+
+        this.#fontMap = {};
+
+        this.#clients = [];
+    }
+};
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // "GLOBAL" OBJECTS AND VARIABLES
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -3740,7 +4108,9 @@ FoxyApp.templateID = -1;
 FoxyApp.widgetInstanceIdCounter = -1;
 FoxyApp.elementCache = null;
 FoxyApp.backgroundThread = null;
+FoxyApp.imageUrlLoader = null;
 FoxyApp.mediaUploader = null;
+FoxyApp.googleFontLoader = null;
 
 FoxyApp.UI = {};
 FoxyApp.UI.panelResizer = null;
@@ -3792,7 +4162,12 @@ FoxyApp.Main = class
         FoxyApp.backgroundThread = new FoxyApp.Class.BackgroundThread();
         FoxyApp.backgroundThread.create();
 
+        FoxyApp.imageUrlLoader = new FoxyApp.Class.ImageUrlLoader();
+
         FoxyApp.mediaUploader = new FoxyApp.Class.MediaUploader();
+
+        FoxyApp.googleFontLoader = new FoxyApp.Class.GoogleFontLoader();
+        FoxyApp.googleFontLoader.create(document, 50);
 
         FoxyApp.UI.panelResizer = new FoxyApp.Class.UI.Component.PanelResizer();
         FoxyApp.UI.panelResizer.create();

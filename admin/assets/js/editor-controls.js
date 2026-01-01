@@ -215,7 +215,10 @@ FoxyControls.load = function()
 
             parentElement.appendChild(this.controlElement);
 
-            this.controlElement.querySelector('.foxybdr-control-label').innerText = this.setting.label;
+            this.controlElement.querySelector('.foxybdr-control-label').innerText = this.setting.label !== undefined ? this.setting.label : '';
+
+            if (this.setting.label_block === true)
+                this.controlElement.classList.add('foxybdr-control-multirow');
 
             if (this.setting.responsive)
             {
@@ -358,6 +361,15 @@ FoxyControls.load = function()
         }
 
         onDisplayValueChanged(displayValue, placeholderValue) {}  // overridable
+
+        setValue(newValue)
+        {
+            this.value = newValue;
+
+            let d = this.getDisplayValue();
+
+            this.onDisplayValueChanged(d.displayValue, d.placeholderValue);
+        }
 
         destroy()
         {
@@ -644,7 +656,12 @@ FoxyControls.load = function()
         onDisplayValueChanged(displayValue, placeholderValue)
         {
             if (displayValue === '')
-                this.#selectElement.selectedIndex = -1;
+            {
+                if (this.setting.options[''] !== undefined)
+                    this.#selectElement.value = '';
+                else
+                    this.#selectElement.selectedIndex = -1;
+            }
             else
                 this.#selectElement.value = String(displayValue);
         }
@@ -2173,6 +2190,1213 @@ FoxyControls.load = function()
         }
     };
 
+    FoxyControls.Class.Font = class extends FoxyControls.Class.BaseControl
+    {
+        #fontElement = null;
+        #fontButtonElement = null;
+        #globalButtonElement = null;
+        #customDropdownElement = null;
+        #globalDropdownElement = null;
+
+        #fontPicker = null;
+
+        constructor(name, setting, value)
+        {
+            super(name, setting, value);
+        }
+
+        create(parentElement)
+        {
+            super.create(parentElement);
+
+            this.#fontElement = FoxyApp.elementCache.cloneElement('foxybdr-tmpl-input-font');
+            this.controlElement.querySelector('.foxybdr-control-input').appendChild(this.#fontElement);
+
+            this.#fontButtonElement = this.#fontElement.querySelector('.foxybdr-font-button');
+            this.#globalButtonElement = this.#fontElement.querySelector('.foxybdr-global-button');
+
+            this.#customDropdownElement = this.#fontButtonElement.querySelector('.foxybdr-custom-dropdown');
+            this.#globalDropdownElement = this.#globalButtonElement.querySelector('.foxybdr-global-dropdown');
+
+            this.#fontPicker = new FoxyControls.Class.FontPicker();
+            this.#fontPicker.create(this.#customDropdownElement.querySelector('.foxybdr-body'));
+            this.#fontPicker.addEventListener(this);
+
+            if (this.setting.is_global === true)
+            {
+                this.#fontElement.classList.add('foxybdr-is-global');
+            }
+            else
+            {
+                let dropdownBodyElement = this.#globalDropdownElement.querySelector('.foxybdr-body');
+                let widgetInstance = FoxyApp.Model.Settings.siteSettings;
+                let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetID];
+
+                for (let i = 1; i <= 10; i++)
+                {
+                    let settingName = `fonts_global_${i}`;
+                    let fontValue = widgetInstance.data.sparseSettings[settingName];
+                    if (fontValue === undefined)
+                        fontValue = widget.settings[settingName].default;
+
+                    settingName = `fonts_name_${i}`;
+                    let name = widgetInstance.data.sparseSettings[settingName];
+                    if (name === undefined)
+                        name = widget.settings[settingName].default;
+
+                    let rowElement = FoxyApp.elementCache.cloneElement('foxybdr-tmpl-input-font-global-row');
+                    rowElement.setAttribute('foxybdr-id', String(i));
+                    rowElement.setAttribute('foxybdr-font-group', fontValue.group);
+                    rowElement.setAttribute('foxybdr-font-id', fontValue.id);
+                    rowElement.setAttribute('foxybdr-font-value', fontValue.value);
+                    rowElement.children[0].children[0].innerText = name;
+                    rowElement.children[0].children[1].innerText = fontValue.value;
+                    rowElement.children[0].children[1].style.fontFamily = fontValue.value;
+
+                    dropdownBodyElement.appendChild(rowElement);
+
+                    this.registerEvent(rowElement, 'click');
+                }
+            }
+
+            this.registerEvent(document.body, 'click');
+            this.registerEvent(this.#customDropdownElement.querySelector('.dashicons-trash'), 'click');
+            this.registerEvent(this.#globalDropdownElement.querySelector('.dashicons-trash'), 'click');
+            this.registerEvent(this.#globalDropdownElement.querySelector('.dashicons-admin-generic'), 'click');
+
+            FoxyApp.googleFontLoader.registerClient(this);
+
+            let d = this.getDisplayValue();
+
+            this.onDisplayValueChanged(d.displayValue, d.placeholderValue);
+        }
+
+        handleEvent(e)
+        {
+            if (e.type === 'click' && e.currentTarget.tagName.toLowerCase() === 'body')
+            {
+                let show = FoxyControls.Function.onDropdownClickEvent(e, this.#fontButtonElement, this.#customDropdownElement);
+
+                if (show !== null)
+                    this.#fontPicker.show(show);
+
+                FoxyControls.Function.onDropdownClickEvent(e, this.#globalButtonElement, this.#globalDropdownElement);
+            }
+            else if (e.type === 'click' && e.currentTarget.classList.contains('foxybdr-input-font-global-row'))
+            {
+                let rowElements = this.#globalDropdownElement.querySelectorAll('.foxybdr-input-font-global-row');
+
+                for (let i = 0; i < rowElements.length; i++)
+                {
+                    if (rowElements[i] === e.currentTarget)
+                        rowElements[i].classList.add('foxybdr-selected');
+                    else
+                        rowElements[i].classList.remove('foxybdr-selected');
+                }
+
+                this.#fontPicker.setValue(null);
+
+                this.onFontSelected();
+            }
+            else if (e.type === 'font-picker-change')
+            {
+                if (e.value !== null)
+                {
+                    let rowElements = this.#globalDropdownElement.querySelectorAll('.foxybdr-input-font-global-row');
+
+                    for (let i = 0; i < rowElements.length; i++)
+                        rowElements[i].classList.remove('foxybdr-selected');
+                }
+
+                this.onFontSelected();
+            }
+            else if (e.type === 'click' && e.currentTarget.classList.contains('dashicons-trash'))
+            {
+                if (this.#customDropdownElement.contains(e.currentTarget))
+                {
+                    this.#fontPicker.setValue(null);
+
+                    this.onFontSelected();
+                }
+                else if (this.#globalDropdownElement.contains(e.currentTarget))
+                {
+                    let rowElements = this.#globalDropdownElement.querySelectorAll('.foxybdr-input-font-global-row');
+
+                    for (let i = 0; i < rowElements.length; i++)
+                        rowElements[i].classList.remove('foxybdr-selected');
+
+                    this.onFontSelected();
+                }
+            }
+            else if (e.type === 'click' && e.currentTarget.classList.contains('dashicons-admin-generic'))
+            {
+                FoxyApp.Function.navigateToGlobalFonts();
+            }
+
+            super.handleEvent(e);
+        }
+
+        onFontSelected()
+        {
+            let fontTitle;
+
+            let value = {
+                'group': '',
+                'id': '',
+                'value': ''
+            };
+
+            let selectedGlobalRow = this.#globalDropdownElement.querySelector('.foxybdr-input-font-global-row.foxybdr-selected');
+
+            if (selectedGlobalRow)
+            {
+                fontTitle = selectedGlobalRow.getAttribute('foxybdr-font-value');
+
+                let id = selectedGlobalRow.getAttribute('foxybdr-id');
+
+                value = {
+                    group: '.',
+                    id: id,
+                    value: `var(--foxybdr-global-font-${id})`
+                };
+            }
+
+            let fv = this.#fontPicker.getValue();
+
+            if (fv !== null)
+            {
+                fontTitle = fv.value;
+                value = fv;
+            }
+
+            let fontNameElement = this.#fontButtonElement.querySelector('.foxybdr-font-name');
+            if (value.value !== '')
+            {
+                fontNameElement.innerText = fontTitle;
+                fontNameElement.style.fontFamily = fontTitle;
+            }
+            else
+            {
+                fontNameElement.innerText = 'Default';
+                fontNameElement.style.fontFamily = '';
+            }
+
+            if (selectedGlobalRow)
+                this.#globalButtonElement.classList.add('foxybdr-enabled');
+            else
+                this.#globalButtonElement.classList.remove('foxybdr-enabled');
+
+            this.setDisplayValue(value);
+
+            this.#loadGoogleFonts();
+        }
+
+        onDisplayValueChanged(displayValue, placeholderValue)
+        {
+            let fontNameElement = this.#fontButtonElement.querySelector('.foxybdr-font-name');
+
+            if (displayValue.value === '')
+            {
+                this.#fontPicker.setValue(null);
+
+                let rowElements = this.#globalDropdownElement.querySelectorAll('.foxybdr-input-font-global-row');
+                for (let i = 0; i < rowElements.length; i++)
+                    rowElements[i].classList.remove('foxybdr-selected');
+
+                fontNameElement.innerText = 'Default';
+                fontNameElement.style.fontFamily = '';
+
+                this.#globalButtonElement.classList.remove('foxybdr-enabled');
+            }
+            else if (displayValue.group === '.')
+            {
+                this.#fontPicker.setValue(null);
+
+                let fontTitle;
+                let rowElements = this.#globalDropdownElement.querySelectorAll('.foxybdr-input-font-global-row');
+                for (let i = 0; i < rowElements.length; i++)
+                {
+                    if (rowElements[i].getAttribute('foxybdr-id') === displayValue.id)
+                    {
+                        rowElements[i].classList.add('foxybdr-selected');
+                        fontTitle = rowElements[i].getAttribute('foxybdr-font-value');
+                    }
+                    else
+                    {
+                        rowElements[i].classList.remove('foxybdr-selected');
+                    }
+                }
+
+                fontNameElement.innerText = fontTitle;
+                fontNameElement.style.fontFamily = fontTitle;
+
+                this.#globalButtonElement.classList.add('foxybdr-enabled');
+            }
+            else
+            {
+                this.#fontPicker.setValue(displayValue);
+
+                let rowElements = this.#globalDropdownElement.querySelectorAll('.foxybdr-input-font-global-row');
+                for (let i = 0; i < rowElements.length; i++)
+                    rowElements[i].classList.remove('foxybdr-selected');
+
+                fontNameElement.innerText = displayValue.value;
+                fontNameElement.style.fontFamily = displayValue.value;
+
+                this.#globalButtonElement.classList.remove('foxybdr-enabled');
+            }
+
+            this.#loadGoogleFonts();
+        }
+
+        #loadGoogleFonts()
+        {
+            let fontIds = [];
+
+            let rowElements = this.#globalDropdownElement.querySelectorAll('.foxybdr-input-font-global-row');
+
+            for (let i = 0; i < rowElements.length; i++)
+            {
+                if (rowElements[i].getAttribute('foxybdr-font-group') === 'google')
+                {
+                    let fontId = rowElements[i].getAttribute('foxybdr-font-id');
+                    fontIds.push(fontId);
+                }
+            }
+
+            let fv = this.#fontPicker.getValue();
+
+            if (fv !== null && fv.group === 'google')
+                fontIds.push(fv.id);
+
+            FoxyApp.googleFontLoader.requestFonts(this, fontIds);
+        }
+
+        destroy()
+        {
+            super.destroy();
+
+            this.#fontElement = null;
+            this.#fontButtonElement = null;
+            this.#globalButtonElement = null;
+            this.#customDropdownElement = null;
+            this.#globalDropdownElement = null;
+
+            if (this.#fontPicker)
+            {
+                this.#fontPicker.destroy();
+                this.#fontPicker = null;
+            }
+
+            FoxyApp.googleFontLoader.unregisterClient(this);
+        }
+    };
+
+    FoxyControls.Class.FontPicker = class extends FoxyApp.Class.UI.Component.BaseComponent
+    {
+        #value = null;
+
+        #fontPickerElement = null;
+        #searchInputElement = null;
+        #fontListElement = null;
+
+        googleFontTimeoutHandle = null;
+
+        constructor()
+        {
+            super();
+        }
+
+        create(parentElement)
+        {
+            this.#fontPickerElement = FoxyApp.elementCache.cloneElement('foxybdr-tmpl-input-font-picker');
+            parentElement.appendChild(this.#fontPickerElement);
+
+            this.#searchInputElement = this.#fontPickerElement.querySelector('.foxybdr-search-bar input[type="text"]');
+            this.#fontListElement = this.#fontPickerElement.querySelector('.foxybdr-font-list');
+
+            this.registerEvent(this.#searchInputElement, 'input');
+            this.registerEvent(this.#fontListElement, 'scroll');
+
+            let sortedGroups = [];
+            
+            for (let group in FOXYAPP.assets.fonts)
+            {
+                sortedGroups.push({
+                    group: group,
+                    order: FOXYAPP.assets.fonts[group].order
+                });
+            }
+
+            sortedGroups.sort(function(a, b) {
+                return a.order - b.order;
+            });
+
+            for (let sortedGroup of sortedGroups)
+            {
+                let group = sortedGroup.group;
+                let groupInfo = FOXYAPP.assets.fonts[group];
+                let groupTitle = groupInfo.title;
+
+                let groupElement = document.createElement('div');
+                groupElement.classList.add('foxybdr-font-group');
+                groupElement.setAttribute('foxybdr-group', group);
+                groupElement.innerText = groupTitle;
+                this.#fontListElement.appendChild(groupElement);
+
+                for (let font of groupInfo.font_list)
+                {
+                    let fontId;
+                    let fontTitle;
+
+                    if (typeof font === 'string')
+                    {
+                        fontId = font;
+                        fontTitle = font;
+                    }
+                    else
+                    {
+                        fontId = String(font.id);
+                        fontTitle = font.title;
+                    }
+
+                    let fontElement = document.createElement('div');
+                    fontElement.classList.add('foxybdr-font-item');
+                    fontElement.setAttribute('foxybdr-group', group);
+                    fontElement.setAttribute('foxybdr-id', fontId);
+                    fontElement.setAttribute('foxybdr-title', fontTitle);
+                    fontElement.style.fontFamily = fontTitle;
+                    fontElement.innerText = fontTitle;
+                    this.#fontListElement.appendChild(fontElement);
+
+                    this.registerEvent(fontElement, 'click');
+                }
+            }
+
+            FoxyApp.googleFontLoader.registerClient(this);
+        }
+
+        handleEvent(e)
+        {
+            if (e.type === 'click' && e.currentTarget.classList.contains('foxybdr-font-item'))
+            {
+                let fontItemElements = this.#fontListElement.querySelectorAll('.foxybdr-font-item');
+
+                for (let i = 0; i < fontItemElements.length; i++)
+                {
+                    if (fontItemElements[i] === e.currentTarget)
+                        fontItemElements[i].classList.add('foxybdr-selected');
+                    else
+                        fontItemElements[i].classList.remove('foxybdr-selected');
+                }
+
+                this.#value = {
+                    group: e.currentTarget.getAttribute('foxybdr-group'),
+                    id: e.currentTarget.getAttribute('foxybdr-id'),
+                    value: e.currentTarget.getAttribute('foxybdr-title')
+                };
+
+                this.sendEvent({
+                    type: 'font-picker-change',
+                    value: this.#value
+                });
+            }
+            else if (e.type === 'input' && e.currentTarget === this.#searchInputElement)
+            {
+                this.#onSearchInputChanged();
+            }
+            else if (e.type === 'scroll' && e.currentTarget === this.#fontListElement)
+            {
+                if (this.googleFontTimeoutHandle !== null)
+                    clearTimeout(this.googleFontTimeoutHandle);
+
+                let _this = this;
+                this.googleFontTimeoutHandle = setTimeout(function() {
+                    _this.googleFontTimeoutHandle = null;
+                    _this.loadGoogleFonts();
+                }, 200);
+            }
+        }
+
+        setValue(value)
+        {
+            this.#value = value !== null ? structuredClone(value) : null;
+
+            let fontItemElements = this.#fontListElement.querySelectorAll('.foxybdr-font-item');
+
+            for (let i = 0; i < fontItemElements.length; i++)
+            {
+                let group = fontItemElements[i].getAttribute('foxybdr-group');
+                let id = fontItemElements[i].getAttribute('foxybdr-id');
+
+                if (this.#value !== null && this.#value.group === group && this.#value.id === id)
+                    fontItemElements[i].classList.add('foxybdr-selected');
+                else
+                    fontItemElements[i].classList.remove('foxybdr-selected');
+            }
+        }
+
+        getValue()
+        {
+            return this.#value !== null ? structuredClone(this.#value) : null;
+        }
+
+        show(show)
+        {
+            if (show)
+            {
+                this.#clearSearch();
+            }
+        }
+
+        #onSearchInputChanged()
+        {
+            let keyword = this.#searchInputElement.value.trim().toLowerCase();
+
+            if (keyword.length === 0)
+            {
+                this.#clearSearch();
+                return;
+            }
+
+            let fontItemElements = this.#fontListElement.querySelectorAll('.foxybdr-font-item');
+            let matchingGroups = {};
+
+            for (let i = 0; i < fontItemElements.length; i++)
+            {
+                let title = fontItemElements[i].getAttribute('foxybdr-title');
+
+                if (title.toLowerCase().indexOf(keyword) >= 0)
+                {
+                    fontItemElements[i].classList.remove('foxybdr-hide');
+                    matchingGroups[fontItemElements[i].getAttribute('foxybdr-group')] = 1;
+                }
+                else
+                {
+                    fontItemElements[i].classList.add('foxybdr-hide');
+                }
+            }
+
+            let groupElements = this.#fontListElement.querySelectorAll('.foxybdr-font-group');
+
+            for (let i = 0; i < groupElements.length; i++)
+            {
+                let group = groupElements[i].getAttribute('foxybdr-group');
+
+                if (matchingGroups[group] !== undefined)
+                    groupElements[i].classList.remove('foxybdr-hide');
+                else
+                    groupElements[i].classList.add('foxybdr-hide');
+            }
+
+            let emptyMessageElement = this.#fontPickerElement.querySelector('.foxybdr-empty-message');
+            if (Object.keys(matchingGroups).length === 0)
+                emptyMessageElement.classList.remove('foxybdr-hide');
+            else
+                emptyMessageElement.classList.add('foxybdr-hide');
+
+            this.#scrollToSelection();
+        }
+
+        #clearSearch()
+        {
+            this.#searchInputElement.value = '';
+
+            let fontItemElements = this.#fontListElement.querySelectorAll('.foxybdr-font-item');
+            for (let i = 0; i < fontItemElements.length; i++)
+                fontItemElements[i].classList.remove('foxybdr-hide');
+
+            let groupElements = this.#fontListElement.querySelectorAll('.foxybdr-font-group');
+            for (let i = 0; i < groupElements.length; i++)
+                groupElements[i].classList.remove('foxybdr-hide');
+
+            this.#fontPickerElement.querySelector('.foxybdr-empty-message').classList.add('foxybdr-hide');
+
+            this.#scrollToSelection();
+        }
+
+        #scrollToSelection()
+        {
+            let selectedElement = this.#fontListElement.querySelector('.foxybdr-font-item.foxybdr-selected:not(.foxybdr-hide)');
+
+            if (selectedElement !== null)
+            {
+                let selectedRect = selectedElement.getBoundingClientRect();
+                let containerRect = this.#fontListElement.getBoundingClientRect();
+                let centerY = (containerRect.top + containerRect.bottom) / 2;
+                let targetY = centerY - selectedRect.height / 2;
+                let scrollAmountNeeded = selectedRect.top - targetY;
+
+                let scrollRange = this.#fontListElement.scrollHeight - this.#fontListElement.clientHeight;
+                let newScrollPos = this.#fontListElement.scrollTop + scrollAmountNeeded;
+                newScrollPos = Math.min(Math.max(newScrollPos, 0), scrollRange);
+
+                this.#fontListElement.scrollTop = newScrollPos;
+            }
+            else
+            {
+                this.#fontListElement.scrollTop = 0;
+            }
+
+            this.loadGoogleFonts();
+        }
+
+        loadGoogleFonts()
+        {
+            let fontIds = [];
+
+            let elements = this.#fontListElement.querySelectorAll(':not(.foxybdr-hide)');
+
+            if (elements.length > 0)
+            {
+                let containerRect = this.#fontListElement.getBoundingClientRect();
+
+                let topIndex = this.#findTopListElementIndex(elements);
+
+                for (let i = topIndex; i < elements.length; i++)
+                {
+                    let childElement = elements[i];
+    
+                    let rect = childElement.getBoundingClientRect();
+                    if (rect.top > containerRect.bottom)
+                        break;
+    
+                    if (childElement.classList.contains('foxybdr-font-item') === false)
+                        continue;
+    
+                    if (childElement.getAttribute('foxybdr-group') !== 'google')
+                        continue;
+    
+                    let fontId = childElement.getAttribute('foxybdr-id');
+    
+                    fontIds.push(fontId);
+                }
+            }
+
+            FoxyApp.googleFontLoader.requestFonts(this, fontIds);
+        }
+
+        /* Method #findTopListElementIndex. Finds the index of the child element that intersects with the top edge of this.#fontListElement.
+         * Since there are about 1,500 Google fonts, there are about 1,500 child elements. For performance reasons, this function uses
+         * recursion to traverse the child elements in about log[base 2](N) operations instead of linearly in N operations. */
+        #findTopListElementIndex(elements, topY, startIndex, endIndex)
+        {
+            let childRect;
+
+            if (topY === undefined)  // This is the starting condition.
+            {
+                let containerRect = this.#fontListElement.getBoundingClientRect();
+
+                topY = containerRect.top;
+                startIndex = 0;
+                endIndex = elements.length - 1;
+
+                childRect = elements[startIndex].getBoundingClientRect();
+                if (topY >= childRect.top && topY <= childRect.bottom)
+                    return startIndex;
+
+                childRect = elements[endIndex].getBoundingClientRect();
+                if (topY >= childRect.top && topY <= childRect.bottom)
+                    return endIndex;
+            }
+
+            if (endIndex - startIndex <= 1)  // This is the terminating condition.
+                return startIndex;
+
+            let medianIndex = Math.round((startIndex + endIndex) / 2);
+
+            childRect = elements[medianIndex].getBoundingClientRect();
+            if (topY >= childRect.top && topY <= childRect.bottom)
+                return medianIndex;
+
+            if (childRect.top < topY && childRect.bottom < topY)
+                return this.#findTopListElementIndex(elements, topY, medianIndex, endIndex);
+            else
+                return this.#findTopListElementIndex(elements, topY, startIndex, medianIndex);
+        }
+
+        destroy()
+        {
+            super.destroy();
+
+            if (this.#fontPickerElement)
+            {
+                this.#fontPickerElement.remove();
+                this.#fontPickerElement = null;
+            }
+
+            this.#searchInputElement = null;
+            this.#fontListElement = null;
+
+            FoxyApp.googleFontLoader.unregisterClient(this);
+        }
+    };
+
+    FoxyControls.Class.Icons = class extends FoxyControls.Class.BaseControl
+    {
+        #iconsElement = null;
+        #iElement = null;
+
+        #dialog = null;
+
+        #library = '';
+        #icon = '';
+
+        constructor(name, setting, value)
+        {
+            super(name, setting, value);
+        }
+
+        create(parentElement)
+        {
+            super.create(parentElement);
+
+            this.controlElement.classList.add('foxybdr-control-multirow');
+
+            this.#iconsElement = FoxyApp.elementCache.cloneElement('foxybdr-tmpl-input-icons');
+            this.controlElement.querySelector('.foxybdr-control-input').appendChild(this.#iconsElement);
+
+            this.#iElement = this.#iconsElement.querySelector('i');
+
+            this.#dialog = new FoxyControls.Class.IconsDialog();
+            this.#dialog.create(this.controlElement);
+            this.#dialog.addEventListener(this);
+
+            this.registerEvent(this.#iconsElement, 'click');
+
+            let d = this.getDisplayValue();
+
+            this.onDisplayValueChanged(d.displayValue, d.placeholderValue);
+        }
+
+        handleEvent(e)
+        {
+            if (e.type === 'click' && e.currentTarget === this.#iconsElement)
+            {
+                if (e.target.classList.contains('dashicons-trash'))
+                {
+                    this.#library = '';
+                    this.#icon = '';
+
+                    this.#iconsElement.classList.remove('foxybdr-assigned');
+                    this.#iElement.className = '';
+
+                    this.setDisplayValue({
+                        library: '',
+                        value: ''
+                    });
+                }
+                else
+                {
+                    this.#dialog.show(this.#library, this.#icon);
+                }
+
+            }
+            else if (e.type === 'icon-change')
+            {
+                this.#library = e.library;
+                this.#icon = e.icon;
+
+                if (this.#library !== '' && FOXYAPP.assets.iconLibraries[this.#library] !== undefined)
+                {
+                    let cssPrefix = FOXYAPP.assets.iconLibraries[this.#library].css_prefix;
+
+                    this.#iconsElement.classList.add('foxybdr-assigned');
+                    this.#iElement.className = cssPrefix + this.#icon;
+
+                    this.setDisplayValue({
+                        library: this.#library,
+                        value: cssPrefix + this.#icon
+                    });
+                }
+                else
+                {
+                    this.#iconsElement.classList.remove('foxybdr-assigned');
+                    this.#iElement.className = '';
+    
+                    this.setDisplayValue({
+                        library: '',
+                        value: ''
+                    });
+                }
+            }
+
+            super.handleEvent(e);
+        }
+
+        onDisplayValueChanged(displayValue, placeholderValue)
+        {
+            if (displayValue.library === '')
+            {
+                this.#library = '';
+                this.#icon = '';
+
+                this.#iconsElement.classList.remove('foxybdr-assigned');
+                this.#iElement.className = '';
+            }
+            else if (FOXYAPP.assets.iconLibraries[displayValue.library] !== undefined)
+            {
+                this.#library = displayValue.library;
+
+                let cssPrefix = FOXYAPP.assets.iconLibraries[this.#library].css_prefix;
+
+                if (displayValue.value.indexOf(cssPrefix) === 0)
+                {
+                    this.#icon = displayValue.value.substring(cssPrefix.length);
+                }
+                else
+                {
+                    this.#icon = displayValue.value;
+                }
+
+                this.#iconsElement.classList.add('foxybdr-assigned');
+                this.#iElement.className = cssPrefix + this.#icon;
+            }
+        }
+
+        destroy()
+        {
+            super.destroy();
+
+            this.#iconsElement = null;
+            this.#iElement = null;
+
+            if (this.#dialog !== null)
+            {
+                this.#dialog.destroy();
+                this.#dialog = null;
+            }
+        }
+    };
+
+    FoxyControls.Class.IconsDialog = class extends FoxyApp.Class.UI.Component.BaseComponent
+    {
+        #dialogElement = null;
+        #selectElement = null;
+        #searchInputElement = null;
+
+        #selectedLibrary = '';
+        #selectedIcon = '';
+
+        constructor()
+        {
+            super();
+        }
+
+        create(parentElement)
+        {
+            this.#dialogElement = FoxyApp.elementCache.cloneElement('foxybdr-tmpl-input-icons-dialog');
+            parentElement.appendChild(this.#dialogElement);
+
+            let containerElement = this.#dialogElement.querySelector('.foxybdr-side-panel > div');
+            for (let libName in FOXYAPP.assets.iconLibraries)
+            {
+                let library = FOXYAPP.assets.iconLibraries[libName];
+
+                let libraryElement = document.createElement('div');
+                libraryElement.classList.add('foxybdr-library');
+                libraryElement.setAttribute('foxybdr-library', libName);
+                libraryElement.innerText = library.title;
+                containerElement.appendChild(libraryElement);
+
+                this.registerEvent(libraryElement, 'click');
+            }
+
+            let gridElement = this.#dialogElement.querySelector('.foxybdr-icon-list .foxybdr-grid');
+            this.registerEvent(gridElement, 'click');
+
+            this.registerEvent(this.#dialogElement.querySelector('.dashicons-no'), 'click');
+
+            this.#selectElement = this.#dialogElement.querySelector('.foxybdr-select-button');
+            this.registerEvent(this.#selectElement, 'click');
+
+            this.#searchInputElement = this.#dialogElement.querySelector('.foxybdr-search-bar input[type="text"]');
+            this.registerEvent(this.#searchInputElement, 'input');
+        }
+
+        handleEvent(e)
+        {
+            if (e.type === 'click' && e.currentTarget.classList.contains('dashicons-no'))
+            {
+                this.#disappear();
+            }
+            else if (e.type === 'click' && e.currentTarget.classList.contains('foxybdr-library'))
+            {
+                if (e.currentTarget.classList.contains('foxybdr-selected') === false)
+                    this.#selectLibrary(e.currentTarget.getAttribute('foxybdr-library'));
+            }
+            else if (e.type === 'click' && e.currentTarget.classList.contains('foxybdr-grid'))
+            {
+                let cardElement = e.target.closest('.foxybdr-icon-card');
+
+                if (cardElement !== null)
+                {
+                    let selectedLibraryElement = this.#dialogElement.querySelector('.foxybdr-library.foxybdr-selected');
+
+                    this.#selectedLibrary = selectedLibraryElement.getAttribute('foxybdr-library');
+                    this.#selectedIcon = cardElement.getAttribute('foxybdr-name');
+
+                    let oldSelectedCardElement = this.#dialogElement.querySelector('.foxybdr-icon-card.foxybdr-selected');
+                    if (oldSelectedCardElement !== null)
+                        oldSelectedCardElement.classList.remove('foxybdr-selected');
+
+                    cardElement.classList.add('foxybdr-selected');
+
+                    this.#updateSelectButton();
+                }
+            }
+            else if (e.type === 'click' && e.currentTarget === this.#selectElement)
+            {
+                this.sendEvent({
+                    type: 'icon-change',
+                    library: this.#selectedLibrary,
+                    icon: this.#selectedIcon
+                });
+
+                this.#disappear();
+            }
+            else if (e.type === 'input' && e.currentTarget === this.#searchInputElement)
+            {
+                this.#onSearchInputChanged();
+            }
+        }
+
+        show(library, icon)
+        {
+            this.#dialogElement.classList.add('foxybdr-show');
+            document.body.classList.add('foxybdr-showing-dialog');
+
+            let _this = this;
+            setTimeout(function() {
+                _this.appear();
+            }, 1);
+
+            this.#selectedLibrary = library;
+            this.#selectedIcon = icon;
+
+            this.#selectLibrary(library);
+
+            this.#updateSelectButton();
+        }
+
+        appear()
+        {
+            this.#dialogElement.classList.add('foxybdr-appear');
+        }
+
+        #disappear()
+        {
+            this.#dialogElement.classList.remove('foxybdr-appear');
+
+            let _this = this;
+            setTimeout(function() {
+                _this.hide();
+            }, 200);
+        }
+
+        hide()
+        {
+            // Free up some memory. 1,000+ icons means 1,000+ bitmaps in memory.
+            this.#dialogElement.querySelector('.foxybdr-icon-list .foxybdr-grid').innerHTML = '';
+
+            this.#dialogElement.classList.remove('foxybdr-show');
+            document.body.classList.remove('foxybdr-showing-dialog');
+        }
+
+        #selectLibrary(library)
+        {
+            let libraryElements = this.#dialogElement.querySelectorAll('.foxybdr-library');
+
+            for (let i = 0; i < libraryElements.length; i++)
+            {
+                let libraryElement = libraryElements[i];
+
+                let libraryAttr = libraryElement.getAttribute('foxybdr-library');
+
+                if (library === '' && i === 0)
+                    library = libraryAttr;
+
+                if (libraryAttr === library)
+                    libraryElement.classList.add('foxybdr-selected');
+                else
+                    libraryElement.classList.remove('foxybdr-selected');
+            }
+
+            let gridElement = this.#dialogElement.querySelector('.foxybdr-icon-list .foxybdr-grid');
+
+            gridElement.innerHTML = '';
+
+            this.#clearSearch();
+
+            if (FOXYAPP.assets.iconLibraries[library] === undefined)
+                return;
+
+            let icons = FOXYAPP.assets.iconLibraries[library].icons.icons;
+            let prefix = FOXYAPP.assets.iconLibraries[library].css_prefix;
+            let selectedCardElement = null;
+
+            for (let icon of icons)
+            {
+                let title = icon.name.replaceAll('-', ' ');
+
+                let cardElement = document.createElement('div');
+                cardElement.classList.add('foxybdr-icon-card');
+                if (library === this.#selectedLibrary && icon.name === this.#selectedIcon)
+                {
+                    cardElement.classList.add('foxybdr-selected');
+                    selectedCardElement = cardElement;
+                }
+                cardElement.setAttribute('foxybdr-name', icon.name);
+                cardElement.setAttribute('foxybdr-title', title);
+                gridElement.appendChild(cardElement);
+
+                let iElement = document.createElement('i');
+                iElement.className = prefix + icon.name;
+                cardElement.appendChild(iElement);
+
+                let spanElement = document.createElement('span');
+                spanElement.innerText = title;
+                cardElement.appendChild(spanElement);
+            }
+
+            if (selectedCardElement !== null)
+            {
+                let selectedRect = selectedCardElement.getBoundingClientRect();
+                let containerRect = gridElement.getBoundingClientRect();
+                let centerY = (containerRect.top + containerRect.bottom) / 2;
+                let targetY = centerY - selectedRect.height / 2;
+                let scrollAmountNeeded = selectedRect.top - targetY;
+
+                let scrollRange = gridElement.scrollHeight - gridElement.clientHeight;
+                let newScrollPos = gridElement.scrollTop + scrollAmountNeeded;
+                newScrollPos = Math.min(Math.max(newScrollPos, 0), scrollRange);
+
+                gridElement.scrollTop = newScrollPos;
+            }
+            else
+            {
+                gridElement.scrollTop = 0;
+            }
+        }
+
+        #updateSelectButton()
+        {
+            if (this.#selectedLibrary !== '' && this.#selectedIcon !== '')
+                this.#selectElement.classList.add('foxybdr-enabled');
+            else
+                this.#selectElement.classList.remove('foxybdr-enabled');
+        }
+
+        #onSearchInputChanged()
+        {
+            let keyword = this.#searchInputElement.value.trim().toLowerCase();
+
+            if (keyword.length === 0)
+            {
+                this.#clearSearch();
+                return;
+            }
+
+            let cardElements = this.#dialogElement.querySelectorAll('.foxybdr-icon-card');
+            let itemsFound = 0;
+
+            for (let i = 0; i < cardElements.length; i++)
+            {
+                let title = cardElements[i].getAttribute('foxybdr-title');
+
+                if (title.toLowerCase().indexOf(keyword) >= 0)
+                {
+                    cardElements[i].classList.remove('foxybdr-hide');
+                    itemsFound++;
+                }
+                else
+                {
+                    cardElements[i].classList.add('foxybdr-hide');
+                }
+            }
+
+            if (itemsFound > 0)
+            {
+                this.#dialogElement.querySelector('.foxybdr-icon-list').classList.remove('foxybdr-hide');
+                this.#dialogElement.querySelector('.foxybdr-empty-message').classList.add('foxybdr-hide');
+            }
+            else
+            {
+                this.#dialogElement.querySelector('.foxybdr-icon-list').classList.add('foxybdr-hide');
+                this.#dialogElement.querySelector('.foxybdr-empty-message').classList.remove('foxybdr-hide');
+            }
+        }
+
+        #clearSearch()
+        {
+            this.#searchInputElement.value = '';
+
+            let cardElements = this.#dialogElement.querySelectorAll('.foxybdr-icon-card');
+            for (let i = 0; i < cardElements.length; i++)
+                cardElements[i].classList.remove('foxybdr-hide');
+
+            this.#dialogElement.querySelector('.foxybdr-icon-list').classList.remove('foxybdr-hide');
+            this.#dialogElement.querySelector('.foxybdr-empty-message').classList.add('foxybdr-hide');
+        }
+
+        destroy()
+        {
+            super.destroy();
+
+            if (this.#dialogElement !== null)
+            {
+                this.#dialogElement.remove();
+                this.#dialogElement = null;
+            }
+
+            this.#selectElement = null;
+            this.#searchInputElement = null;
+        }
+    };
+
+    FoxyControls.Class.Group = class extends FoxyControls.Class.BaseControl
+    {
+        #groupElement = null;
+        #groupButtonElement = null;
+        #groupDropdownElement = null;
+
+        #groupControlDef = null;
+        #controls = [];
+
+        #groupValue = {};
+
+        constructor(name, setting, value)
+        {
+            super(name, setting, value);
+        }
+
+        create(parentElement)
+        {
+            super.create(parentElement);
+
+            this.#groupControlDef = FOXYAPP.groupControls[this.setting.sub_type];
+
+            if (this.#groupControlDef.isDropdown === false)
+            {
+                this.controlElement.classList.add('foxybdr-control-multirow');
+                this.controlElement.classList.add('foxybdr-control-hide-prompt');
+            }
+
+            let title = this.setting.label !== undefined ? this.setting.label : this.#groupControlDef.title;
+            this.controlElement.querySelector('.foxybdr-control-label').innerText = title;
+
+            let cloneID = this.#groupControlDef.isDropdown === true ? 'foxybdr-tmpl-input-group-with-dropdown' : 'foxybdr-tmpl-input-group-inline';
+            this.#groupElement = FoxyApp.elementCache.cloneElement(cloneID);
+            this.controlElement.querySelector('.foxybdr-control-input').appendChild(this.#groupElement);
+
+            this.#groupValue = structuredClone(this.getDisplayValue().displayValue);
+
+            let controlWrapperElement;
+
+            if (this.#groupControlDef.isDropdown)
+            {
+                controlWrapperElement = this.#groupElement.querySelector('.foxybdr-control-wrapper');
+
+                this.#groupButtonElement = this.#groupElement.querySelector('.foxybdr-group-button');
+                this.#groupDropdownElement = this.#groupElement.querySelector('.foxybdr-group-dropdown');
+
+                this.#groupDropdownElement.querySelector('.foxybdr-title').innerText = title;
+
+                if (Object.keys(this.#groupValue).length > 0)
+                    this.#groupButtonElement.classList.add('foxybdr-enabled');
+                else
+                    this.#groupButtonElement.classList.remove('foxybdr-enabled');
+
+                this.registerEvent(document.body, 'click');
+                this.registerEvent(this.#groupDropdownElement.querySelector('.dashicons-trash'), 'click');
+            }
+            else
+            {
+                controlWrapperElement = this.#groupElement;
+            }
+
+            for (let settingName of this.#groupControlDef.orderedSettings)
+            {
+                let settingParams = this.#groupControlDef.settings[settingName];
+
+                let value = this.#groupValue[settingName] !== undefined ? this.#groupValue[settingName] : null;
+
+                let control = FoxyControls.Class.Factory.create(settingParams.type, settingName, settingParams, value);
+                control.create(controlWrapperElement);
+                control.addEventListener(this);
+                this.#controls.push(control);
+            }
+        }
+
+        handleEvent(e)
+        {
+            if (e.type === 'click' && e.currentTarget.tagName.toLowerCase() === 'body')
+            {
+                FoxyControls.Function.onDropdownClickEvent(e, this.#groupButtonElement, this.#groupDropdownElement);
+            }
+            else if (e.type === 'click' && e.currentTarget.classList.contains('dashicons-trash'))
+            {
+                this.#groupValue = {};
+
+                for (let control of this.#controls)
+                    control.setValue(null);
+
+                this.onGroupValueChanged();
+            }
+            else if (e.type === 'control-change')  // A sub-control has changed value.
+            {
+                if (e.value !== null)
+                {
+                    this.#groupValue[e.name] = e.value;
+                }
+                else if (this.#groupValue[e.name] !== undefined)
+                {
+                    delete this.#groupValue[e.name];
+                }
+
+                this.onGroupValueChanged();
+            }
+            else if (e.type === 'control-device-change')  // A sub-control has initiated a device mode change.
+            {
+                this.sendEvent(e);
+            }
+            else if (e.type === 'device-change')
+            {
+                for (let control of this.#controls)
+                    control.handleEvent(e);
+            }
+
+            super.handleEvent(e);
+        }
+
+        onGroupValueChanged()
+        {
+            if (this.#groupControlDef.isDropdown)
+            {
+                if (Object.keys(this.#groupValue).length > 0)
+                    this.#groupButtonElement.classList.add('foxybdr-enabled');
+                else
+                    this.#groupButtonElement.classList.remove('foxybdr-enabled');
+            }
+
+            this.setDisplayValue(structuredClone(this.#groupValue));
+        }
+
+        destroy()
+        {
+            super.destroy();
+
+            this.#groupElement = null;
+            this.#groupButtonElement = null;
+            this.#groupDropdownElement = null;
+    
+            for (let control of this.#controls)
+                control.destroy();
+
+            this.#controls = [];
+        }
+    };
+
 }  // end FoxyControls.load function
 
 
@@ -2199,6 +3423,9 @@ FoxyControls.Class.Factory = class
             case 'URL': return new FoxyControls.Class.Url(name, setting, value); break;
             case 'COLOR': return new FoxyControls.Class.Color(name, setting, value); break;
             case 'MEDIA': return new FoxyControls.Class.Media(name, setting, value); break;
+            case 'FONT': return new FoxyControls.Class.Font(name, setting, value); break;
+            case 'ICONS': return new FoxyControls.Class.Icons(name, setting, value); break;
+            case 'GROUP': return new FoxyControls.Class.Group(name, setting, value); break;
         }
     }
 };
@@ -2228,5 +3455,15 @@ FoxyControls.controlDefaultValues = {
     'MEDIA': {
         'id': '',
         'url': ''
-    }
+    },
+    'FONT': {
+        'group': '',
+        'id': '',
+        'value': ''
+    },
+    'ICONS': {
+        'library': '',
+        'value': ''
+    },
+    'GROUP': {}
 };

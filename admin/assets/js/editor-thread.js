@@ -67,6 +67,51 @@ FoxyApp.Function.evaluateValue = function(sparseValue, settingParams)
     }
 }
 
+FoxyApp.Function.evaluateGlobal = function(value, type)
+{
+    if ([ 'COLOR', 'FONT' ].includes(type) === false)
+        return value;
+
+    let settingName;
+
+    switch (type)
+    {
+        case 'COLOR':
+            {
+                let match = /var\(--foxybdr-global-color-(\d+)\)/.exec(value);
+
+                if (match !== null)
+                {
+                    settingName = `colors_global_${match[1]}`;
+                }
+            }
+            break;
+
+        case 'FONT':
+            {
+                if (value.group === '.')
+                {
+                    settingName = `fonts_global_${value.id}`;
+                }
+            }
+            break;
+    }
+
+    if (settingName === undefined)
+        return value;
+
+    let widgetInstance = FoxyApp.Model.widgetInstances['S-siteSettings'];
+
+    let newValue = widgetInstance.data.sparseSettings[settingName];
+
+    if (newValue !== undefined)
+        return newValue;
+
+    let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetID];
+
+    return widget.settings[settingName].default;
+}
+
 FoxyApp.Function.isValueEqual = function(firstObject, secondObject)
 {
     if (firstObject === null && secondObject !== null || firstObject !== null && secondObject === null)
@@ -101,6 +146,35 @@ FoxyApp.Function.isValueEqual = function(firstObject, secondObject)
     return true;
 }
 
+FoxyApp.Function.getImageUrl = function(id, fullSizeUrl, size)
+{
+    let idStr = String(id);
+
+    let imageUrls = FoxyApp.Cache.Image.Url.cache[idStr];
+
+    if (imageUrls === undefined)
+    {
+        FoxyApp.Cache.Image.Url.faults.push(id);
+        return fullSizeUrl;
+    }
+
+    if (imageUrls[size] === undefined)
+        return fullSizeUrl;
+
+    return imageUrls[size];
+}
+
+FoxyApp.Function.escapeHtml = function(unsafe)
+{
+    return unsafe
+        .replaceAll("&", '&amp;')
+        .replaceAll("<", '&lt;')
+        .replaceAll(">", '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#x27;')
+        .replaceAll("`", '&#x60;');
+};
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // CLASSES
@@ -111,8 +185,6 @@ FoxyApp.Class = {};
 
 FoxyApp.Class.Renderer = class
 {
-    #globalColorRegex = /var\(--foxybdr-global-color-(\d+)\)/;
-
     buildSettings(wInstanceID, context, sparseSettings, widgetSettings)
     {
         let contextualSparseSettings = this.#applyContextToSettings(wInstanceID, context, sparseSettings);
@@ -130,7 +202,7 @@ FoxyApp.Class.Renderer = class
         return sparseSettings;
     }
 
-    #evaluateSettings(sparseSettings, wSettings)
+    #evaluateSettings(sparseSettings, wSettings, settingNamePrefix)
     {
         let eSettings = {};
 
@@ -141,66 +213,45 @@ FoxyApp.Class.Renderer = class
             switch (settingParams.type)
             {
                 case 'GROUP':
+                    {
+                        let newSparseSettings = sparseSettings[settingName];
+                        if (newSparseSettings === undefined)
+                            newSparseSettings = settingParams.default;
+                        if (newSparseSettings === undefined)
+                            newSparseSettings = FoxyApp.Model.controlDefaultValues[settingParams.type];
+
+                        let groupControl = FoxyApp.Model.groupControls[settingParams.sub_type];
+
+                        let subSettings = this.#evaluateSettings(newSparseSettings, groupControl.settings, `${settingName}_`);
+
+                        Object.assign(eSettings, subSettings);
+                    }
                     break;
 
                 case 'REPEATER':
+                    {
+                    }
                     break;
 
                 default:
+                    {
+                        let prefix = settingNamePrefix !== undefined ? settingNamePrefix : '';
 
-                    let resp = FoxyApp.Function.evaluateValue(sparseSettings[settingName], settingParams);
+                        let resp = FoxyApp.Function.evaluateValue(sparseSettings[settingName], settingParams);
 
-                    eSettings[`${settingName}`] = this.#evaluateGlobal(resp.desktop, settingParams.type);
+                        eSettings[`${prefix}${settingName}`] = FoxyApp.Function.evaluateGlobal(resp.desktop, settingParams.type);
 
-                    if (resp.tablet !== undefined)
-                        eSettings[`${settingName}_tablet`] = this.#evaluateGlobal(resp.tablet, settingParams.type);
+                        if (resp.tablet !== undefined)
+                            eSettings[`${prefix}${settingName}_tablet`] = FoxyApp.Function.evaluateGlobal(resp.tablet, settingParams.type);
 
-                    if (resp.mobile !== undefined)
-                        eSettings[`${settingName}_mobile`] = this.#evaluateGlobal(resp.mobile, settingParams.type);
-
+                        if (resp.mobile !== undefined)
+                            eSettings[`${prefix}${settingName}_mobile`] = FoxyApp.Function.evaluateGlobal(resp.mobile, settingParams.type);
+                    }
                     break;
             }
         }
 
         return eSettings;
-    }
-
-    #evaluateGlobal(value, type)
-    {
-        if ([ 'COLOR' ].includes(type) === false)
-            return value;
-
-        let settingName;
-
-        switch (type)
-        {
-            case 'COLOR':
-                {
-                    let match = this.#globalColorRegex.exec(value);
-
-                    if (match !== null)
-                    {
-                        settingName = `colors_global_${match[1]}`;
-                    }
-                }
-                break;
-
-            // TODO: Evaluate global fonts.
-        }
-
-        if (settingName === undefined)
-            return value;
-
-        let widgetInstance = FoxyApp.Model.widgetInstances['S-siteSettings'];
-
-        let newValue = widgetInstance.data.sparseSettings[settingName];
-
-        if (newValue !== undefined)
-            return newValue;
-
-        let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetID];
-
-        return widget.settings[settingName].default;
     }
 };
 
@@ -244,85 +295,118 @@ FoxyApp.Class.StylesheetGenerator = class
             switch (settingParams.type)
             {
                 case 'GROUP':
-
-                    if (settingParams.selector === undefined)
-                        continue;
-                    
-                    break;
-
-                case 'REPEATER':
-                    break;
-
-                default:
-
-                    if (settingParams.selectors === undefined)
-                        continue;
-
-                    let currentResponsiveValue = FoxyApp.Function.evaluateValue(sparseSettings[settingName], settingParams);
-
-                    let selectorData = [];
-
-                    for (let selector in settingParams.selectors)
                     {
-                        let eSelector = selector;
+                        if (settingParams.selector === undefined)
+                            continue;
+
+                        let eSelector = settingParams.selector;
                         for (let v in selectorVariables)
                             eSelector = eSelector.replaceAll(`{{${v}}}`, selectorVariables[v]);
 
-                        let selectorValue = settingParams.selectors[selector];
+                        let newSelectorVariables = {
+                            ...selectorVariables,
+                            'SELECTOR': eSelector
+                        };
 
-                        let variables = {};
-                        let match;
-                        while ((match = this.#varRegex.exec(selectorValue)) !== null)
-                            variables[match[1]] = this.#getVariableValue(match[1], currentResponsiveValue, sparseSettings, wSettings);
+                        let newSparseSettings = sparseSettings[settingName];
+                        if (newSparseSettings === undefined)
+                            newSparseSettings = settingParams.default;
+                        if (newSparseSettings === undefined)
+                            newSparseSettings = FoxyApp.Model.controlDefaultValues[settingParams.type];
 
-                        selectorData.push({
-                            selector: eSelector,
-                            selectorValue: selectorValue,
-                            variables: variables
-                        });
+                        let groupControl = FoxyApp.Model.groupControls[settingParams.sub_type];
+
+                        this.#evaluateSettings(newSparseSettings, groupControl.settings, newSelectorVariables);
                     }
+                    break;
 
-                    for (let device of [ 'desktop', 'tablet', 'mobile' ])
+                case 'REPEATER':
                     {
-                        if (currentResponsiveValue[device] === undefined || FoxyApp.Function.isValueEqual(currentResponsiveValue[device], FoxyApp.Model.controlDefaultValues[settingParams.type]))
+                    }
+                    break;
+
+                default:
+                    {
+                        if (settingParams.selectors === undefined && settingParams.selector_value === undefined)
                             continue;
 
-                        for (let sd of selectorData)
+                        let selectorList;
+                        if (settingParams.selectors !== undefined)
                         {
-                            let selectorValue = `${sd.selectorValue}`;  // clone string
+                            selectorList = settingParams.selectors;
+                        }
+                        else if (settingParams.selector_value !== undefined)
+                        {
+                            selectorList = {
+                                '{{SELECTOR}}': settingParams.selector_value
+                            };
+                        }
 
-                            let valid = true;
+                        let currentResponsiveValue = FoxyApp.Function.evaluateValue(sparseSettings[settingName], settingParams);
 
-                            for (let varName in sd.variables)
+                        let selectorData = [];
+
+                        for (let selector in selectorList)
+                        {
+                            let eSelector = selector;
+                            for (let v in selectorVariables)
+                                eSelector = eSelector.replaceAll(`{{${v}}}`, selectorVariables[v]);
+
+                            let selectorValue = selectorList[selector];
+
+                            let variables = {};
+                            let match;
+                            while ((match = this.#varRegex.exec(selectorValue)) !== null)
+                                variables[match[1]] = this.#getVariableValue(match[1], currentResponsiveValue, sparseSettings, wSettings);
+
+                            selectorData.push({
+                                selector: eSelector,
+                                selectorValue: selectorValue,
+                                variables: variables
+                            });
+                        }
+
+                        for (let device of [ 'desktop', 'tablet', 'mobile' ])
+                        {
+                            if (currentResponsiveValue[device] === undefined || FoxyApp.Function.isValueEqual(currentResponsiveValue[device], FoxyApp.Model.controlDefaultValues[settingParams.type]))
+                                continue;
+
+                            for (let sd of selectorData)
                             {
-                                let value = sd.variables[varName][device];
+                                let selectorValue = `${sd.selectorValue}`;  // clone string
 
-                                if (value === undefined || value === '')
+                                let valid = true;
+
+                                for (let varName in sd.variables)
                                 {
-                                    valid = false;
-                                    break;
+                                    let value = sd.variables[varName][device];
+
+                                    if (value === undefined || value === '')
+                                    {
+                                        valid = false;
+                                        break;
+                                    }
+                                    else
+                                    {
+                                        selectorValue = selectorValue.replaceAll(`{{${varName}}}`, String(value));
+                                    }
                                 }
-                                else
+
+                                if (valid)
                                 {
-                                    selectorValue = selectorValue.replaceAll(`{{${varName}}}`, String(value));
-                                }
-                            }
+                                    if (this.#stylesheet[device][sd.selector] === undefined)
+                                        this.#stylesheet[device][sd.selector] = {};
 
-                            if (valid)
-                            {
-                                if (this.#stylesheet[device][sd.selector] === undefined)
-                                    this.#stylesheet[device][sd.selector] = {};
+                                    let cssProperties = this.#buildCssPropertiesFromString(selectorValue);
 
-                                let cssProperties = this.#buildCssPropertiesFromString(selectorValue);
-
-                                for (let cssProperty in cssProperties)
-                                {
-                                    this.#stylesheet[device][sd.selector][cssProperty] = cssProperties[cssProperty];
+                                    for (let cssProperty in cssProperties)
+                                    {
+                                        this.#stylesheet[device][sd.selector][cssProperty] = cssProperties[cssProperty];
+                                    }
                                 }
                             }
                         }
                     }
-
                     break;
             }
         }
@@ -358,7 +442,7 @@ FoxyApp.Class.StylesheetGenerator = class
         {
             if (responsiveValue[device] !== undefined)
             {
-                newValue[device] = fieldName === 'value' ? responsiveValue[device] : responsiveValue[device][fieldName];
+                newValue[device] = fieldName === 'value' && responsiveValue[device][fieldName] === undefined ? responsiveValue[device] : responsiveValue[device][fieldName];
             }
         }
 
@@ -450,14 +534,289 @@ FoxyApp.Class.StylesheetGenerator = class
     }
 };
 
+FoxyApp.Class.AssetFinder = class
+{
+    #seekGeneralFonts = false;
+    #seekGoogleFonts = false;
+    #seekIconLibraries = false;
+
+    #generalFonts = {};
+    #googleFonts = {};
+    #iconLibraries = {};
+
+    enableGeneralFonts(enable)
+    {
+        this.#seekGeneralFonts = enable;
+    }
+
+    enableGoogleFonts(enable)
+    {
+        this.#seekGoogleFonts = enable;
+    }
+
+    enableIconLibraries(enable)
+    {
+        this.#seekIconLibraries = enable;
+    }
+
+    find()
+    {
+        for (let wInstanceID in FoxyApp.Model.widgetInstances)
+        {
+            let widgetInstance = FoxyApp.Model.widgetInstances[wInstanceID];
+
+            if (widgetInstance.data.widgetType !== 0)
+                return;
+    
+            let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetID];
+    
+            this.#evaluateSettings(widgetInstance.data.sparseSettings, widget.settings);
+        }
+    }
+
+    getGeneralFonts()
+    {
+        let generalFonts = [];
+
+        for (let key in this.#generalFonts)
+        {
+            let items = key.split('/');
+
+            generalFonts.push({
+                group: items[0],
+                id: items[1]
+            });
+        }
+
+        return generalFonts;
+    }
+
+    getGoogleFonts()
+    {
+        return Object.keys(this.#googleFonts);
+    }
+
+    getIconLibraries()
+    {
+        for (let library in this.#iconLibraries)
+        {
+        }
+    }
+
+    #evaluateSettings(sparseSettings, wSettings)
+    {
+        for (let settingName in wSettings)
+        {
+            let settingParams = wSettings[settingName];
+
+            switch (settingParams.type)
+            {
+                case 'GROUP':
+                    {
+                        let newSparseSettings = sparseSettings[settingName];
+                        if (newSparseSettings === undefined)
+                            newSparseSettings = settingParams.default;
+                        if (newSparseSettings === undefined)
+                            newSparseSettings = FoxyApp.Model.controlDefaultValues[settingParams.type];
+
+                        let groupControl = FoxyApp.Model.groupControls[settingParams.sub_type];
+
+                        this.#evaluateSettings(newSparseSettings, groupControl.settings);
+                    }
+                    break;
+
+                case 'REPEATER':
+                    {
+                    }
+                    break;
+
+                default:
+                    {
+                        if ((this.#seekGeneralFonts || this.#seekGoogleFonts) && settingParams.type === 'FONT' ||
+                            this.#seekIconLibraries && settingParams.type === 'ICONS')
+                        {
+                            let resp = FoxyApp.Function.evaluateValue(sparseSettings[settingName], settingParams);
+
+                            this.#evaluateValue(resp.desktop, settingParams.type);
+
+                            if (resp.tablet !== undefined)
+                            {
+                                this.#evaluateValue(resp.tablet, settingParams.type);
+                            }
+
+                            if (resp.mobile !== undefined)
+                            {
+                                this.#evaluateValue(resp.mobile, settingParams.type);
+                            }
+                        }
+                    }
+                    break;
+            }
+        }
+    }
+
+    #evaluateValue(value, type)
+    {
+        switch (type)
+        {
+            case 'FONT':
+                if (this.#seekGeneralFonts && value.group !== 'google' && value.group !== '' && value.group !== '.')
+                    this.#generalFonts[`${value.group}/${value.id}`] = 1;
+                else if (this.#seekGoogleFonts && value.group === 'google')
+                    this.#googleFonts[value.id] = 1;
+                break;
+
+            case 'ICONS':
+                break;
+        }
+    }
+};
+
+FoxyApp.Class.GlobalDependencyFinder = class
+{
+    #controlType = '';
+    #varValue = '';
+    #wInstanceIDs = [];
+
+    #regexColors = /colors_global_(\d+)/;
+    #regexFonts = /fonts_global_(\d+)/;
+
+    find(settingName)
+    {
+        let widgetInstance = FoxyApp.Model.widgetInstances['S-siteSettings'];
+        let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetID];
+        let controlType = widget.settings[settingName].type;
+
+        let varValue;
+
+        let match = this.#regexColors.exec(settingName);
+        if (match !== null)
+            varValue = `var(--foxybdr-global-color-${match[1]})`;
+
+        match = this.#regexFonts.exec(settingName);
+        if (match !== null)
+            varValue = `var(--foxybdr-global-font-${match[1]})`;
+
+        if (varValue === undefined)
+            return;
+
+        this.#controlType = controlType;
+        this.#varValue = varValue;
+
+        for (let wInstanceID in FoxyApp.Model.widgetInstances)
+        {
+            if (wInstanceID === 'S-siteSettings')
+                continue;
+
+            let widgetInstance = FoxyApp.Model.widgetInstances[wInstanceID];
+
+            if (widgetInstance.data.widgetType !== 0)
+                continue;
+
+            let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetID];
+
+            let hasDependency = this.#evaluateSettings(widgetInstance.data.sparseSettings, widget.settings);
+
+            if (hasDependency)
+                this.#wInstanceIDs.push(wInstanceID);
+        }
+    }
+
+    getInstanceIDs()
+    {
+        return this.#wInstanceIDs;
+    }
+
+    #evaluateSettings(sparseSettings, wSettings)
+    {
+        for (let settingName in wSettings)
+        {
+            let settingParams = wSettings[settingName];
+
+            switch (settingParams.type)
+            {
+                case 'GROUP':
+                    {
+                        let newSparseSettings = sparseSettings[settingName];
+                        if (newSparseSettings === undefined)
+                            newSparseSettings = settingParams.default;
+                        if (newSparseSettings === undefined)
+                            newSparseSettings = FoxyApp.Model.controlDefaultValues[settingParams.type];
+
+                        let groupControl = FoxyApp.Model.groupControls[settingParams.sub_type];
+
+                        if (this.#evaluateSettings(newSparseSettings, groupControl.settings) === true)
+                            return true;
+                    }
+                    break;
+
+                case 'REPEATER':
+                    {
+                    }
+                    break;
+
+                default:
+                    {
+                        if (settingParams.type === this.#controlType)
+                        {
+                            let resp = FoxyApp.Function.evaluateValue(sparseSettings[settingName], settingParams);
+
+                            if (this.#isReferencing(resp.desktop) === true)
+                                return true;
+
+                            if (resp.tablet !== undefined)
+                            {
+                                if (this.#isReferencing(resp.tablet) === true)
+                                    return true;
+                            }
+
+                            if (resp.mobile !== undefined)
+                            {
+                                if (this.#isReferencing(resp.mobile) === true)
+                                    return true;
+                            }
+                        }
+                    }
+                    break;
+            }
+        }
+
+        return false;
+    }
+
+    #isReferencing(value)
+    {
+        switch (this.#controlType)
+        {
+            case 'COLOR':
+                return value === this.#varValue;
+                break;
+
+            case 'FONT':
+                return value.value === this.#varValue;
+                break;
+        }
+
+        return false;
+    }
+};
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // "GLOBAL" OBJECTS AND VARIABLES
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 
+FoxyApp.Cache = {};
+FoxyApp.Cache.Image = {};
+FoxyApp.Cache.Image.Url = {
+    cache: {},
+    faults: []
+};
+
 FoxyApp.Model = {};
 FoxyApp.Model.controlDefaultValues = {};
+FoxyApp.Model.groupControls = {};
 FoxyApp.Model.widgets = {};
 FoxyApp.Model.widgetInstances = {};
 
@@ -477,7 +836,7 @@ FoxyApp.Main = class
         switch (request.type)
         {
             case 'init':
-                this.#init(request.controlDefaultValues, request.widgets);
+                this.#init(request.controlDefaultValues, request.groupControls, request.widgets);
                 break;
 
             case 'widget-instances':
@@ -491,20 +850,35 @@ FoxyApp.Main = class
                 break;
 
             case 'render':
-                let renderHTML = this.#render(request.wInstanceID, request.context);
-                return { renderHTML: renderHTML };
+                return this.#render(request.wInstanceID, request.context);
                 break;
 
             case 'build-stylesheet':
                 let stylesheetStr = this.#buildStylesheet(request.wInstanceID);
                 return { stylesheetStr: stylesheetStr };
                 break;
+
+            case 'cache-image-urls':
+                this.#cacheImageUrls(request.id, request.imageUrls);
+                return { status: 'OK' };
+                break;
+
+            case 'find-google-fonts':
+                let fontIds = this.#findGoogleFonts();
+                return { fontIds: fontIds };
+                break;
+
+            case 'find-global-dependencies':
+                let wInstanceIDs = this.#findGlobalDependencies(request.settingName);
+                return { wInstanceIDs: wInstanceIDs };
+                break;
         }
     }
 
-    #init(controlDefaultValues, widgets)
+    #init(controlDefaultValues, groupControls, widgets)
     {
         FoxyApp.Model.controlDefaultValues = controlDefaultValues;
+        FoxyApp.Model.groupControls = groupControls;
         FoxyApp.Model.widgets = widgets;
 
         FoxyApp.renderer = new FoxyApp.Class.Renderer();
@@ -537,10 +911,15 @@ FoxyApp.Main = class
 
     #render(wInstanceID, context)
     {
+        let result = {
+            renderHTML: '',
+            imageUrlFaults: []
+        }
+
         let widgetInstance = FoxyApp.Model.widgetInstances[wInstanceID];
 
         if (widgetInstance === undefined)
-            return;
+            return result;
 
         switch (widgetInstance.data.widgetType)
         {
@@ -550,19 +929,24 @@ FoxyApp.Main = class
                     let widget = FoxyApp.Model.widgets[widgetID];
 
                     if (widget === undefined)
-                        return;
+                        return result;
 
                     let eSettings = FoxyApp.renderer.buildSettings(wInstanceID, context, widgetInstance.data.sparseSettings, widget.settings);
+
+                    FoxyApp.Cache.Image.Url.faults = [];
 
                     let renderFunction = FoxyRender.renderFunctions[widgetID];
                     let renderHTML = renderFunction(wInstanceID, eSettings);
 
-                    return renderHTML;
+                    return {
+                        renderHTML: renderHTML,
+                        imageUrlFaults: FoxyApp.Cache.Image.Url.faults
+                    };
                 }
                 break;
 
             case 1:  // component
-                return '';
+                return result;
                 break;
         }
     }
@@ -570,6 +954,28 @@ FoxyApp.Main = class
     #buildStylesheet(wInstanceID)
     {
         return FoxyApp.stylesheetGenerator.build(wInstanceID);
+    }
+
+    #cacheImageUrls(id, imageUrls)
+    {
+        FoxyApp.Cache.Image.Url.cache[String(id)] = imageUrls;
+    }
+
+    #findGoogleFonts()
+    {
+        let assetFinder = new FoxyApp.Class.AssetFinder();
+        assetFinder.enableGoogleFonts(true);
+        assetFinder.find();
+        return assetFinder.getGoogleFonts();
+    }
+
+    #findGlobalDependencies(settingName)
+    {
+        let depFinder = new FoxyApp.Class.GlobalDependencyFinder();
+
+        depFinder.find(settingName);
+
+        return depFinder.getInstanceIDs();
     }
 };
 
@@ -595,6 +1001,11 @@ FoxyRender.Printer = class
     static write(textSegment)
     {
         FoxyRender.Printer.textSegments.push(textSegment);
+    }
+
+    static writeEscape(text)
+    {
+        FoxyRender.Printer.textSegments.push(FoxyApp.Function.escapeHtml(text));
     }
 
     static getOutput()

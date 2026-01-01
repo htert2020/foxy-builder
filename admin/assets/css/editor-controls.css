@@ -12,8 +12,12 @@
         justify-content: space-between;
     }
 
-    .foxybdr-control.foxybdr-control-multirow .foxybdr-control-prompt {
+    .foxybdr-control.foxybdr-control-multirow > .foxybdr-control-prompt {
         width: 100%;
+    }
+
+    .foxybdr-control.foxybdr-control-multirow.foxybdr-control-hide-prompt > .foxybdr-control-prompt {
+        display: none;
     }
 
         .foxybdr-control-prompt > div:nth-child(1) {
@@ -135,9 +139,70 @@
         justify-content: flex-end;
     }
 
-    .foxybdr-control.foxybdr-control-multirow .foxybdr-control-input {
+    .foxybdr-control.foxybdr-control-multirow > .foxybdr-control-input {
         width: 100%;
         padding-top: 4px;
+    }
+
+    .foxybdr-control.foxybdr-control-multirow.foxybdr-control-hide-prompt > .foxybdr-control-input {
+        padding-top: 0px;
+    }
+
+.foxybdr-control-dropdown {
+    position: absolute;
+    right: 0px;
+    top: calc(100% + 8px);
+    width: 200px;
+    z-index: 10;
+    display: none;
+    flex-direction: column;
+    border-radius: 4px;
+    background-color: var(--foxybdr-general-bg-color);
+    color: var(--foxybdr-general-t-color);
+    line-height: 1.0;
+    box-shadow: var(--foxybdr-popup-shadow);
+    cursor: default;
+}
+
+.foxybdr-control-dropdown.foxybdr-show {
+    display: flex;
+}
+
+    .foxybdr-control-dropdown .foxybdr-title-bar {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px;
+        border-style: solid;
+        border-color: var(--foxybdr-general-br-color);
+        border-width: 0px 0px 1px 0px;
+    }
+
+        .foxybdr-control-dropdown .foxybdr-title-bar > div {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+            .foxybdr-control-dropdown .foxybdr-title-bar .foxybdr-title {
+                font-size: 12px;
+            }
+
+            .foxybdr-control-dropdown .foxybdr-title-bar .dashicons {
+                display: block;
+                border-radius: 2px;
+                padding: 2px;
+                color: var(--foxybdr-popup-input-bg-color);
+                font-size: 14px;
+                cursor: pointer;
+            }
+
+            .foxybdr-control-dropdown .foxybdr-title-bar .dashicons:hover {
+                background-color: var(--foxybdr-popup-input-bg-color);
+                color: var(--foxybdr-input-t-color);
+            }
+
+    .foxybdr-control-dropdown .foxybdr-body {
+        padding: 8px;
     }
 
 .foxybdr-input-text {
@@ -776,77 +841,20 @@
             visibility: visible;
         }
 
-.foxybdr-control-dropdown {
-    position: absolute;
-    right: 0px;
-    top: calc(100% + 8px);
-    width: 200px;
-    z-index: 10;
-    display: none;
-    flex-direction: column;
-    border-radius: 4px;
-    background-color: var(--foxybdr-general-bg-color);
-    color: var(--foxybdr-general-t-color);
-    line-height: 1.0;
-    box-shadow: var(--foxybdr-popup-shadow);
-    cursor: default;
-}
-
-.foxybdr-control-dropdown.foxybdr-show {
-    display: flex;
-}
-
-    .foxybdr-control-dropdown .foxybdr-title-bar {
-        display: flex;
-        justify-content: space-between;
-        padding: 8px;
-        border-style: solid;
-        border-color: var(--foxybdr-general-br-color);
-        border-width: 0px 0px 1px 0px;
-    }
-
-        .foxybdr-control-dropdown .foxybdr-title-bar > div {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-            .foxybdr-control-dropdown .foxybdr-title-bar .foxybdr-title {
-                font-size: 12px;
-            }
-
-            .foxybdr-control-dropdown .foxybdr-title-bar .dashicons {
-                display: block;
-                border-radius: 2px;
-                padding: 2px;
-                color: var(--foxybdr-popup-input-bg-color);
-                font-size: 14px;
-                cursor: pointer;
-            }
-
-            .foxybdr-control-dropdown .foxybdr-title-bar .dashicons:hover {
-                background-color: var(--foxybdr-popup-input-bg-color);
-                color: var(--foxybdr-input-t-color);
-            }
-
-    .foxybdr-control-dropdown .foxybdr-body {
-        padding: 8px;
-    }
-
 .foxybdr-input-media {
     position: relative;
     width: 100%;
     aspect-ratio: 300 / 128;
-    background-image: none;
-    background-size: cover;
-    background-position: center;
     background-color: var(--foxybdr-input-bg-color);
     cursor: pointer;
     --foxybdr-background-image-url: none;
 }
 
 .foxybdr-input-media.foxybdr-assigned {
-    background-image: var(--foxybdr-background-image-url);
+    background-image: var(--foxybdr-background-image-url), url(../images/control_media_checkerboard.gif);
+    background-size: cover, auto auto;
+    background-position: center, 0 0;
+    background-repeat: no-repeat, repeat;
 }
 
     .foxybdr-input-media > .dashicons {
@@ -893,4 +901,595 @@
 
     .foxybdr-input-media:hover .dashicons-trash {
         opacity: 1.0;
+    }
+
+.foxybdr-input-font {
+    position: relative;
+    width: 100%;
+    display: flex;
+    gap: 4px;
+}
+
+    .foxybdr-input-font .foxybdr-global-button {
+        position: static;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        flex-grow: 0;
+        flex-shrink: 0;
+        border-width: 0px;
+        border-radius: 4px;
+        background-color: var(--foxybdr-input-bg-color);
+        color: var(--foxybdr-popup-input-bg-color);
+        font-size: 12px;
+        line-height: 1.0;
+        cursor: pointer;
+    }
+
+    .foxybdr-input-font .foxybdr-global-button.foxybdr-enabled {
+        background-color: var(--foxybdr-popup-input-bg-color);
+        color: var(--foxybdr-input-t-color);
+    }
+
+    .foxybdr-input-font .foxybdr-global-button:hover {
+        color: var(--foxybdr-input-t-color);
+    }
+
+    .foxybdr-input-font.foxybdr-is-global .foxybdr-global-button {
+        display: none;
+    }
+
+        .foxybdr-input-font .foxybdr-global-button > .dashicons {
+            position: relative;
+            left: 1px;
+            top: 1px;
+        }
+
+    .foxybdr-input-font .foxybdr-font-button {
+        position: relative;
+        height: 28px;
+        flex-grow: 1;
+        flex-shrink: 1;
+        border-width: 0px;
+        border-radius: 4px;
+        padding: 8px;
+        background-color: var(--foxybdr-input-bg-color);
+        color: var(--foxybdr-input-t-color);
+        font-family: var(--foxybdr-general-font);
+        font-size: 12px;
+        font-weight: normal;
+        line-height: 1.0;
+        cursor: pointer;
+    }
+
+        .foxybdr-input-font .foxybdr-font-button > .foxybdr-font-name {
+            position: absolute;
+            left: 8px;
+            top: 8px;
+            width: calc(100% - 8px - 8px);
+            display: block;
+            white-space: nowrap;
+            overflow-x: clip;
+        }
+
+        .foxybdr-input-font .foxybdr-global-dropdown {
+            width: 200px;
+            max-height: 260px;
+        }
+
+            .foxybdr-input-font .foxybdr-global-dropdown .foxybdr-body {
+                padding: 0px;
+                overflow-y: auto;
+                scrollbar-width: thin;
+                scroll-behavior: smooth;
+                scrollbar-color: #80808040 #ffffff20;
+            }
+
+        .foxybdr-input-font .foxybdr-custom-dropdown {
+            width: 240px;
+        }
+
+            .foxybdr-input-font.foxybdr-is-global .foxybdr-custom-dropdown .foxybdr-title-bar .dashicons.dashicons-trash {
+                display: none;
+            }
+
+            .foxybdr-input-font .foxybdr-custom-dropdown .foxybdr-body {
+                padding: 0px;
+            }
+
+.foxybdr-input-font-picker {
+    display: flex;
+    flex-direction: column;
+}
+
+    .foxybdr-input-font-picker .foxybdr-search-bar {
+        padding: 8px;
+    }
+
+        .foxybdr-input-font-picker .foxybdr-search-bar input[type='text'] {
+            width: 100%;
+            border-width: 0px;
+            border-radius: 4px;
+            padding: 8px;
+            background-color: var(--foxybdr-input-bg-color);
+            color: var(--foxybdr-input-t-color);
+            font-family: var(--foxybdr-general-font);
+            font-size: 12px;
+            font-weight: normal;
+            line-height: 1.0;
+        }
+
+        .foxybdr-input-font-picker .foxybdr-search-bar input[type='text']::placeholder {
+            color: var(--foxybdr-input-p-color);
+        }
+
+    .foxybdr-input-font-picker .foxybdr-font-list {
+        max-height: 373px;
+        overflow-y: auto;
+        scrollbar-width: thin;
+        scrollbar-color: #80808040 #ffffff20;
+    }
+
+        .foxybdr-input-font-picker .foxybdr-font-list > .foxybdr-font-group {
+            padding: 8px;
+            color: var(--foxybdr-input-t-color);
+        }
+
+        .foxybdr-input-font-picker .foxybdr-font-list > .foxybdr-font-item {
+            padding: 8px 8px 8px 24px;
+            color: var(--foxybdr-input-t-color);
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .foxybdr-input-font-picker .foxybdr-font-list > .foxybdr-font-item:hover {
+            background-color: #2c2c2c;
+            color: var(--foxybdr-input-t-color);
+        }
+
+        .foxybdr-input-font-picker .foxybdr-font-list > .foxybdr-font-item.foxybdr-selected {
+            background-color: var(--foxybdr-popup-input-bg-color);;
+            color: var(--foxybdr-input-t-color);
+        }
+
+        .foxybdr-input-font-picker .foxybdr-font-list > .foxybdr-hide {
+            display: none;
+        }
+
+    .foxybdr-input-font-picker .foxybdr-empty-message {
+        padding: 8px;
+        color: var(--foxybdr-popup-input-bg-color);
+    }
+
+    .foxybdr-input-font-picker .foxybdr-empty-message.foxybdr-hide {
+        display: none;
+    }
+
+.foxybdr-input-font-global-row {
+    display: flex;
+    cursor: pointer;
+    --foxybdr-column-2-width: 32px;
+}
+
+.foxybdr-input-font-global-row.foxybdr-selected {
+    background-color: var(--foxybdr-input-bg-color);
+}
+
+.foxybdr-input-font-global-row:not(.foxybdr-selected):hover {
+    background-color: #2c2c2c;
+}
+
+    .foxybdr-input-font-global-row > div {
+        padding: 8px;
+    }
+
+    .foxybdr-input-font-global-row > div:nth-child(1) {
+        width: calc(100% - var(--foxybdr-column-2-width));
+        overflow-x: hidden;
+    }
+
+        .foxybdr-input-font-global-row > div:nth-child(1) > div {
+            color: var(--foxybdr-popup-input-bg-color);
+            white-space: nowrap;
+        }
+
+        .foxybdr-input-font-global-row.foxybdr-selected > div:nth-child(1) > div,
+        .foxybdr-input-font-global-row:hover > div:nth-child(1) > div {
+            color: var(--foxybdr-input-t-color);
+        }
+
+        .foxybdr-input-font-global-row > div:nth-child(1) > .foxybdr-name {
+            font-size: 10px;
+            line-height: 1.0;
+        }
+
+        .foxybdr-input-font-global-row > div:nth-child(1) > .foxybdr-font {
+            margin-top: 4px;
+            font-size: 16px;
+            line-height: 1.0;
+        }
+
+    .foxybdr-input-font-global-row > div:nth-child(2) {
+        width: var(--foxybdr-column-2-width);
+        display: flex;
+        justify-content: center;
+        align-items: flex-start;
+    }
+
+        .foxybdr-input-font-global-row > div:nth-child(2) > span {
+            color: var(--foxybdr-input-t-color);
+            font-size: 16px;
+            line-height: 1.0;
+            visibility: hidden;
+        }
+
+        .foxybdr-input-font-global-row.foxybdr-selected > div:nth-child(2) > span {
+            visibility: visible;
+        }
+
+.foxybdr-input-icons {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 300 / 128;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: var(--foxybdr-input-bg-color);
+    cursor: pointer;
+}
+
+    .foxybdr-input-icons > i {
+        display: none;
+        color: var(--foxybdr-input-t-color);
+        font-size: 70px;
+        line-height: 1.0;
+    }
+
+    .foxybdr-input-icons.foxybdr-assigned > i {
+        display: block;
+    }
+
+    .foxybdr-input-icons > .dashicons {
+        position: absolute;
+        width: auto;
+        height: auto;
+        display: block;
+        border-radius: 2px;
+        padding: 2px;
+        color: var(--foxybdr-popup-input-bg-color);
+        line-height: 1.0;
+        cursor: pointer;
+        transition: all linear 0.2s;
+    }
+
+    .foxybdr-input-icons .dashicons-insert {
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 20px;
+    }
+
+    .foxybdr-input-icons.foxybdr-assigned .dashicons-insert {
+        display: none;
+    }
+
+    .foxybdr-input-icons:hover .dashicons-insert {
+        color: var(--foxybdr-input-t-color);
+    }
+
+    .foxybdr-input-icons .dashicons-trash {
+        right: 4px;
+        top: 4px;
+        display: none;
+        background-color: var(--foxybdr-general-bg-color);
+        color: var(--foxybdr-input-t-color);
+        font-size: 16px;
+        opacity: 0.0;
+    }
+
+    .foxybdr-input-icons.foxybdr-assigned .dashicons-trash {
+        display: block;
+    }
+
+    .foxybdr-input-icons:hover .dashicons-trash {
+        opacity: 1.0;
+    }
+
+.foxybdr-input-icons-dlg {
+    position: fixed;
+    left: 0px;
+    top: 0px;
+    width: 100%;
+    height: 100%;
+    z-index: 9999;
+    display: none;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.8);
+    cursor: default;
+    opacity: 0.0;
+    transition: opacity linear 0.2s;
+}
+
+.foxybdr-input-icons-dlg.foxybdr-show {
+    display: flex;
+}
+
+.foxybdr-input-icons-dlg.foxybdr-show.foxybdr-appear {
+    opacity: 1.0;
+}
+
+    .foxybdr-input-icons-dlg > .foxybdr-dlg-box {
+        width: calc(100% - 100% / 1920px * 100px);
+        height: calc(100% - 100% / 1080px * 100px);
+        display: flex;
+        flex-direction: column;
+        border-radius: 4px;
+        background-color: var(--foxybdr-dlg-bg-color);
+        color: var(--foxybdr-dlg-t-color);
+        font-family: var(--foxybdr-general-font);
+        font-weight: normal;
+        line-height: 1.0;
+    }
+
+        .foxybdr-input-icons-dlg .foxybdr-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-grow: 0;
+            flex-shrink: 0;
+            border-style: solid;
+            border-color: var(--foxybdr-dlg-header-line-color);
+            border-width: 0px 0px 1px 0px;
+            padding: 16px;
+        }
+
+            .foxybdr-input-icons-dlg .foxybdr-header .foxybdr-title {
+                font-size: 16px;
+                font-weight: bold;
+                line-height: 1.0;
+            }
+
+            .foxybdr-input-icons-dlg .foxybdr-header .dashicons {
+                width: auto;
+                height: auto;
+                color: #808080;
+                font-size: 24px;
+                line-height: 1.0;
+                cursor: pointer;
+                transition: color linear 0.2s;
+            }
+
+            .foxybdr-input-icons-dlg .foxybdr-header .dashicons:hover {
+                color: #000000;
+            }
+
+        .foxybdr-input-icons-dlg .foxybdr-body {
+            display: flex;
+            flex-grow: 1;
+            flex-shrink: 1;
+            border-style: solid;
+            border-color: var(--foxybdr-dlg-header-line-color);
+            border-width: 0px 0px 1px 0px;
+        }
+
+            .foxybdr-input-icons-dlg .foxybdr-side-panel {
+                position: relative;
+                width: 33.33%;
+                max-width: 250px;
+                flex-grow: 0;
+                flex-shrink: 0;
+                border-style: solid;
+                border-color: var(--foxybdr-dlg-header-line-color);
+                border-width: 0px 1px 0px 0px;
+            }
+
+                .foxybdr-input-icons-dlg .foxybdr-side-panel > div {
+                    position: absolute;
+                    left: 0px;
+                    top: 0px;
+                    width: 100%;
+                    height: auto;
+                    max-height: 100%;
+                    overflow-y: auto;
+                }
+
+                    .foxybdr-input-icons-dlg .foxybdr-side-panel .foxybdr-library {
+                        padding: 16px;
+                        font-size: 12px;
+                        cursor: pointer;
+                    }
+
+                    .foxybdr-input-icons-dlg .foxybdr-side-panel .foxybdr-library:not(.foxybdr-selected):hover {
+                        background-color: #f0f0f0;
+                    }
+
+                    .foxybdr-input-icons-dlg .foxybdr-side-panel .foxybdr-library.foxybdr-selected {
+                        background-color: var(--foxybdr-dlg-header-line-color);
+                    }
+
+            .foxybdr-input-icons-dlg .foxybdr-main-panel {
+                display: flex;
+                flex-direction: column;
+                flex-grow: 1;
+                flex-shrink: 1;
+            }
+
+                .foxybdr-input-icons-dlg .foxybdr-search-bar {
+                    flex-grow: 0;
+                    flex-shrink: 0;
+                    padding: 16px;
+                }
+
+                    .foxybdr-input-icons-dlg .foxybdr-search-bar > input[type="text"] {
+                        width: 100%;
+                        border: 1px solid var(--foxybdr-dlg-input-br-color);
+                        border-radius: 4px;
+                        padding: 8px;
+                        background-color: var(--foxybdr-dlg-input-bg-color);
+                        color: var(--foxybdr-dlg-input-t-color);
+                        font-size: 12px;
+                        line-height: 1.0;
+                    }
+
+                    .foxybdr-input-icons-dlg .foxybdr-search-bar > input[type="text"]::placeholder {
+                        color: var(--foxybdr-dlg-header-line-color);
+                    }
+
+                .foxybdr-input-icons-dlg .foxybdr-icon-list {
+                    position: relative;
+                    flex-grow: 1;
+                    flex-shrink: 1;
+                }
+
+                    .foxybdr-input-icons-dlg .foxybdr-icon-list .foxybdr-grid {
+                        position: absolute;
+                        left: 0px;
+                        top: 0px;
+                        width: 100%;
+                        height: auto;
+                        max-height: 100%;
+                        display: grid;
+                        grid-template-columns: repeat(auto-fit, minmax(75px, 1fr));
+                        gap: 8px;
+                        padding: 16px;
+                        overflow-y: auto;
+                    }
+
+                        .foxybdr-input-icons-dlg .foxybdr-icon-card {
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            gap: 8px;
+                            border-style: solid;
+                            border-color: rgba(0, 0, 0, 0.0);
+                            border-width: 1px;
+                            border-radius: 4px;
+                            padding: 8px;
+                            cursor: pointer;
+                        }
+
+                        .foxybdr-input-icons-dlg .foxybdr-icon-card:hover {
+                            border-color: var(--foxybdr-dlg-header-line-color);
+                            background-color: #f0f0f0;
+                        }
+
+                        .foxybdr-input-icons-dlg .foxybdr-icon-card.foxybdr-selected {
+                            border-color: rgba(0, 0, 0, 1.0);
+                            background-color: var(--foxybdr-dlg-header-line-color);
+                            color: #000000;
+                        }
+
+                        .foxybdr-input-icons-dlg .foxybdr-icon-card.foxybdr-hide {
+                            display: none;
+                        }
+
+                            .foxybdr-input-icons-dlg .foxybdr-icon-card > i {
+                                font-size: 20px;
+                            }
+
+                            .foxybdr-input-icons-dlg .foxybdr-icon-card > span {
+                                font-size: 10px;
+                                text-align: center;
+                                text-transform: capitalize;
+                            }
+
+                .foxybdr-input-icons-dlg .foxybdr-empty-message {
+                    flex-grow: 1;
+                    flex-shrink: 1;
+                    padding: 16px;
+                    font-size: 12px;
+                }
+
+                .foxybdr-input-icons-dlg .foxybdr-icon-list.foxybdr-hide,
+                .foxybdr-input-icons-dlg .foxybdr-empty-message.foxybdr-hide {
+                    display: none;
+                }
+
+        .foxybdr-input-icons-dlg .foxybdr-footer {
+            display: flex;
+            justify-content: flex-end;
+            flex-grow: 0;
+            flex-shrink: 0;
+            padding: 16px;
+        }
+
+            .foxybdr-input-icons-dlg .foxybdr-select-button {
+                position: relative;
+                display: none;
+                border-width: 0px;
+                border-radius: 4px;
+                padding: 8px 24px;
+                background-color: var(--foxybdr-dlg-button1-bg-color);
+                color: var(--foxybdr-dlg-button1-t-color);
+                font-size: 12px;
+                line-height: 1.0;
+                cursor: pointer;
+                transition: all linear 0.2s;
+            }
+
+            .foxybdr-input-icons-dlg .foxybdr-select-button.foxybdr-enabled {
+                display: block;
+            }
+
+            .foxybdr-input-icons-dlg .foxybdr-select-button:hover {
+                background-color: var(--foxybdr-dlg-button1-bg-color-h);
+            }
+
+            .foxybdr-input-icons-dlg .foxybdr-select-button:active {
+                top: 2px;
+            }
+
+.foxybdr-input-group-inline {
+    position: relative;
+    width: 100%;
+}
+
+.foxybdr-input-group-with-dropdown {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+}
+
+    .foxybdr-input-group-with-dropdown .foxybdr-group-button {
+        position: static;
+        width: 28px;
+        height: 28px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        border-width: 0px;
+        border-radius: 4px;
+        background-color: var(--foxybdr-input-bg-color);
+        color: var(--foxybdr-popup-input-bg-color);
+        font-size: 12px;
+        line-height: 1.0;
+        cursor: pointer;
+    }
+
+    .foxybdr-input-group-with-dropdown .foxybdr-group-button.foxybdr-enabled {
+        background-color: var(--foxybdr-popup-input-bg-color);
+        color: var(--foxybdr-input-t-color);
+    }
+
+    .foxybdr-input-group-with-dropdown .foxybdr-group-button:hover {
+        color: var(--foxybdr-input-t-color);
+    }
+
+        .foxybdr-input-group-with-dropdown .foxybdr-group-dropdown {
+            width: 200%;
+        }
+
+            .foxybdr-input-group-with-dropdown .foxybdr-group-dropdown > .foxybdr-body {
+                padding: 16px;
+            }
+
+    .foxybdr-input-group-inline.foxybdr-control-wrapper,
+    .foxybdr-input-group-with-dropdown .foxybdr-group-dropdown >  .foxybdr-control-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
     }

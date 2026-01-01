@@ -196,6 +196,7 @@ select:focus {
 					background-color: var(--foxybdr-resizer-bg-color);
 				}
 
+				body.foxybdr-showing-dialog #foxybdr-panel-resizer,
 				body.mce-fullscreen #foxybdr-panel-resizer {
 					display: none;
 				}
@@ -220,6 +221,7 @@ select:focus {
 					opacity: 1.0;
 				}
 
+				body.foxybdr-showing-dialog #foxybdr-panel-resizer-button,
 				body.mce-fullscreen #foxybdr-panel-resizer-button {
 					display: none;
 				}
@@ -274,6 +276,7 @@ select:focus {
 			z-index: 10;
 		}
 
+		body.foxybdr-showing-dialog #foxybdr-drawer-resizable-backplate,
 		body.mce-fullscreen #foxybdr-drawer-resizable-backplate {
 			display: none;
 		}

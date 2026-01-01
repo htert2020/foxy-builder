@@ -5,7 +5,10 @@ namespace FoxyBuilder\Modules\Widgets\Layout;
 if (!defined('ABSPATH'))
     exit;
 
+require_once FOXYBUILDER_PLUGIN_PATH . '/modules/controls/control-type.php';
 require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/base-widget.php';
+
+use \FoxyBuilder\Modules\Controls\ControlType;
 
 class Column extends \FoxyBuilder\Modules\Widgets\BaseWidget
 {
@@ -53,7 +56,7 @@ class Column extends \FoxyBuilder\Modules\Widgets\BaseWidget
             'content.text',
             [
                 'label'   => __('Text', 'foxy-builder'),
-                'type'    => self::$CONTROL_TYPE_TEXT,
+                'type'    => ControlType::$TEXT,
                 'default' => __('Default Text', 'foxy-builder'),
             ]
         );
@@ -73,7 +76,7 @@ class Column extends \FoxyBuilder\Modules\Widgets\BaseWidget
             'style_propwidth',
             [
                 'label'   => __('Proportional Width', 'foxy-builder'),
-                'type'    => self::$CONTROL_TYPE_NUMBER,
+                'type'    => ControlType::$NUMBER,
                 'default' => 1,
                 'selectors' => [
                     '{{WIDGET}}' => 'flex-grow: {{VALUE}}; flex-shrink: {{VALUE}}',

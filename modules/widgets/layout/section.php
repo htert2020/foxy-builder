@@ -5,7 +5,12 @@ namespace FoxyBuilder\Modules\Widgets\Layout;
 if (!defined('ABSPATH'))
     exit;
 
+require_once FOXYBUILDER_PLUGIN_PATH . '/modules/controls/control-type.php';
+require_once FOXYBUILDER_PLUGIN_PATH . '/modules/group-controls/group-control-type.php';
 require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/base-widget.php';
+
+use \FoxyBuilder\Modules\Controls\ControlType;
+use \FoxyBuilder\Modules\GroupControls\GroupControlType;
 
 class Section extends \FoxyBuilder\Modules\Widgets\BaseWidget
 {
@@ -53,7 +58,7 @@ class Section extends \FoxyBuilder\Modules\Widgets\BaseWidget
             'content_text',
             [
                 'label'   => __('Text', 'foxy-builder'),
-                'type'    => self::$CONTROL_TYPE_TEXT,
+                'type'    => ControlType::$TEXT,
                 'placeholder' => __('Default Text', 'foxy-builder'),
             ]
         );
@@ -62,7 +67,7 @@ class Section extends \FoxyBuilder\Modules\Widgets\BaseWidget
             'content_description',
             [
                 'label'   => __('Description', 'foxy-builder'),
-                'type'    => self::$CONTROL_TYPE_TEXTAREA,
+                'type'    => ControlType::$TEXTAREA,
                 'default' => __('', 'foxy-builder'),
                 'placeholder' => __('This is a cool website.', 'foxy-builder'),
             ]
@@ -72,7 +77,7 @@ class Section extends \FoxyBuilder\Modules\Widgets\BaseWidget
             'content_wysiwyg',
             [
                 'label' => 'Wysiwyg Text',
-                'type' => self::$CONTROL_TYPE_WYSIWYG,
+                'type' => ControlType::$WYSIWYG,
             ]
         );
         
@@ -80,26 +85,36 @@ class Section extends \FoxyBuilder\Modules\Widgets\BaseWidget
             'content_url',
             [
                 'label'   => __('URL', 'foxy-builder'),
-                'type'    => self::$CONTROL_TYPE_URL,
+                'type'    => ControlType::$URL,
                 'placeholder' => __('http://www.mysite.com', 'foxy-builder'),
             ]
         );
 
         $this->add_control(
-            'content_image_1',
+            'content_image',
             [
                 'label' => __('Choose Image #1', 'foxy-builder'),
-                'type'  => self::$CONTROL_TYPE_MEDIA,
+                'type'  => ControlType::$MEDIA,
                 'media_title' => 'Image',
             ]
         );
 
-        $this->add_control(
-            'content_image_2',
+        $this->add_group_control(
+            GroupControlType::$IMAGE_SIZE,
             [
-                'label' => __('Choose Image #2', 'foxy-builder'),
-                'type'  => self::$CONTROL_TYPE_MEDIA,
-                'media_title' => 'Image',
+                'name' => 'content_imagesize',
+            ]
+        );
+
+        $this->add_control(
+            'content_icon',
+            [
+                'label' => __('Icon', 'foxy-builder'),
+                'type' => ControlType::$ICONS,
+                'default' => [
+                    'value' => 'fas fa-star',
+                    'library' => 'fa-solid',
+                ],
             ]
         );
 
@@ -113,12 +128,33 @@ class Section extends \FoxyBuilder\Modules\Widgets\BaseWidget
                 'tab' => self::$TAB_STYLE,
             ]
         );
+
+        $this->add_group_control(
+            GroupControlType::$TYPOGRAPHY,
+            [
+                'name' => 'style_typography',
+                'label' => __('Text Typography', 'foxy-builder'),
+                'selector' => '{{WRAPPER}} > div',
+                'exclude' => [],
+            ]
+        );
+
+        $this->add_control(
+            'style_fontfamily',
+            [
+                'label' => __('Font Family', 'foxy-builder'),
+                'type' => ControlType::$FONT,
+                'selectors' => [
+                    '{{WRAPPER}} > div' => 'font-family: {{VALUE}}',
+                ],
+            ]
+        );
         
         $this->add_responsive_control(
             'style_height',
             [
                 'label'   => __('Height', 'foxy-builder'),
-                'type'    => self::$CONTROL_TYPE_SLIDER,
+                'type'    => ControlType::$SLIDER,
                 'size_units' => [ '%', 'px', 'em' ],
                 'range' => [
                     '%' => [
@@ -150,7 +186,7 @@ class Section extends \FoxyBuilder\Modules\Widgets\BaseWidget
             'style_min_height',
             [
                 'label'   => __('Min Height', 'foxy-builder'),
-                'type'    => self::$CONTROL_TYPE_NUMBER,
+                'type'    => ControlType::$NUMBER,
                 'default' => 20,
                 'selectors' => [
                     '{{WRAPPER}} > div' => 'min-height: {{VALUE}}px',
@@ -162,7 +198,7 @@ class Section extends \FoxyBuilder\Modules\Widgets\BaseWidget
             'style_padding',
             [
                 'label' => __('Padding', 'foxy-builder'),
-                'type' => self::$CONTROL_TYPE_DIMENSIONS,
+                'type' => ControlType::$DIMENSIONS,
                 //'sub_type' => 'corners',
                 'size_units' => [ 'px', '%', 'em' ],
                 'selectors' => [
@@ -175,7 +211,7 @@ class Section extends \FoxyBuilder\Modules\Widgets\BaseWidget
             'style_alignment',
             [
                 'label' => __('Alignment', 'foxy-builder'),
-                'type' => self::$CONTROL_TYPE_CHOOSE,
+                'type' => ControlType::$CHOOSE,
                 'options' => [
                     'left' => [
                         'title' => __('Left', 'foxy-builder'),
@@ -201,7 +237,7 @@ class Section extends \FoxyBuilder\Modules\Widgets\BaseWidget
             "style_test_color",
             [
                 'label' => __('Test Color', 'foxy-builder'),
-                'type' => self::$CONTROL_TYPE_COLOR,
+                'type' => ControlType::$COLOR,
                 'selectors' => [
                     '{{WRAPPER}} > div' => 'background-color: {{VALUE}}',
                 ],
@@ -212,7 +248,7 @@ class Section extends \FoxyBuilder\Modules\Widgets\BaseWidget
             'style_yellow',
             [
                 'label' => __('Yellow', 'foxy-builder'),
-                'type' => self::$CONTROL_TYPE_SWITCHER,
+                'type' => ControlType::$SWITCHER,
                 'label_off' => __('No', 'foxy-builder'),
                 'label_on' => __('Yes', 'foxy-builder'),
                 'default' => '',

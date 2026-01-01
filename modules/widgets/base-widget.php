@@ -5,6 +5,10 @@ namespace FoxyBuilder\Modules\Widgets;
 if (!defined('ABSPATH'))
     exit;
 
+require_once FOXYBUILDER_PLUGIN_PATH . '/modules/controls/control-type.php';
+
+use \FoxyBuilder\Modules\Controls\ControlType;
+
 abstract class BaseWidget
 {
     abstract public function get_name();
@@ -30,30 +34,6 @@ abstract class BaseWidget
     protected static $TAB_STYLE = 'style';
 
     protected static $TAB_ADVANCED = 'advanced';
-
-    protected static $CONTROL_TYPE_TEXT = 'TEXT';
-
-    protected static $CONTROL_TYPE_TEXTAREA = 'TEXTAREA';
-
-    protected static $CONTROL_TYPE_WYSIWYG = 'WYSIWYG';
-
-    protected static $CONTROL_TYPE_SELECT = 'SELECT';
-
-    protected static $CONTROL_TYPE_CHOOSE = 'CHOOSE';
-
-    protected static $CONTROL_TYPE_SWITCHER = 'SWITCHER';
-
-    protected static $CONTROL_TYPE_NUMBER = 'NUMBER';
-
-    protected static $CONTROL_TYPE_SLIDER = 'SLIDER';
-
-    protected static $CONTROL_TYPE_DIMENSIONS = 'DIMENSIONS';
-
-    protected static $CONTROL_TYPE_URL = 'URL';
-
-    protected static $CONTROL_TYPE_COLOR = 'COLOR';
-
-    protected static $CONTROL_TYPE_MEDIA = 'MEDIA';
 
     protected $title = '';
 
@@ -191,6 +171,17 @@ abstract class BaseWidget
     public function add_responsive_control($setting_name, $args)
     {
         $this->add_control($setting_name, array_merge($args, [ 'responsive' => true ]));
+    }
+
+    public function add_group_control($group_control_type, $args)
+    {
+        $args['type'] = ControlType::$GROUP;
+        $args['sub_type'] = $group_control_type;
+
+        $setting_name = $args['name'];
+        unset($args['name']);
+
+        $this->add_control($setting_name, $args);
     }
 
     public function init_render()

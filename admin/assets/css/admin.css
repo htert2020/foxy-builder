@@ -11,6 +11,9 @@ body {
     --foxybdr-dlg-button2-t-color: #3c434a;
     --foxybdr-dlg-button2-bg-color: transparent;
     --foxybdr-dlg-button2-bg-color-h: #d0d0d0;
+    --foxybdr-dlg-input-bg-color: #ffffff;
+    --foxybdr-dlg-input-br-color: #d0d0d0;
+    --foxybdr-dlg-input-t-color: #2c3338;
 
     --foxybdr-button-bg-color: #113959;
     --foxybdr-button-bg-color-h: #2271b1;

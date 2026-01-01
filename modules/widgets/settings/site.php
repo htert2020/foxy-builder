@@ -5,7 +5,10 @@ namespace FoxyBuilder\Modules\Widgets\Settings;
 if (!defined('ABSPATH'))
     exit;
 
+require_once FOXYBUILDER_PLUGIN_PATH . '/modules/controls/control-type.php';
 require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/base-widget.php';
+
+use \FoxyBuilder\Modules\Controls\ControlType;
 
 class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
 {
@@ -13,7 +16,7 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
 
     protected static $TAB_COLORS = 'colors';
 
-    protected static $TAB_PALETTES = 'palettes';
+    protected static $TAB_FONTS = 'fonts';
 
     protected static $TAB_DEFAULT_STYLES = 'default-styles';
 
@@ -60,8 +63,8 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
                 'sections' => [],
             ],
             [
-                'title' => __('Palettes', 'foxy-builder'),
-                'name' => self::$TAB_PALETTES,
+                'title' => __('Fonts', 'foxy-builder'),
+                'name' => self::$TAB_FONTS,
                 'sections' => [],
             ],
             [
@@ -96,7 +99,7 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
             'identity.url',
             [
                 'label'   => __('URL', 'foxy-builder'),
-                'type'    => self::$CONTROL_TYPE_TEXT,
+                'type'    => ControlType::$TEXT,
                 'default' => __('', 'foxy-builder'),
             ]
         );
@@ -105,7 +108,7 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
             'identity.title',
             [
                 'label'   => __('Site Title', 'foxy-builder'),
-                'type'    => self::$CONTROL_TYPE_TEXT,
+                'type'    => ControlType::$TEXT,
                 'default' => __('My Website Name', 'foxy-builder'),
             ]
         );
@@ -114,7 +117,7 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
             'identity.description',
             [
                 'label'   => __('Site Description', 'foxy-builder'),
-                'type'    => self::$CONTROL_TYPE_TEXT,
+                'type'    => ControlType::$TEXT,
                 'default' => __('', 'foxy-builder'),
             ]
         );
@@ -123,7 +126,7 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
             'identity.favicon',
             [
                 'label'   => __('Site Icon', 'foxy-builder'),
-                'type'    => self::$CONTROL_TYPE_TEXT,
+                'type'    => ControlType::$TEXT,
                 'default' => __('', 'foxy-builder'),
             ]
         );
@@ -143,7 +146,7 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
             'identity.full_name',
             [
                 'label'   => __('Full Name', 'foxy-builder'),
-                'type'    => self::$CONTROL_TYPE_TEXT,
+                'type'    => ControlType::$TEXT,
                 'default' => __('', 'foxy-builder'),
             ]
         );
@@ -152,7 +155,7 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
             'identity.address',
             [
                 'label'   => __('Street Address', 'foxy-builder'),
-                'type'    => self::$CONTROL_TYPE_TEXT,
+                'type'    => ControlType::$TEXT,
                 'default' => __('', 'foxy-builder'),
             ]
         );
@@ -161,7 +164,7 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
             'identity.city',
             [
                 'label'   => __('City', 'foxy-builder'),
-                'type'    => self::$CONTROL_TYPE_TEXT,
+                'type'    => ControlType::$TEXT,
                 'default' => __('', 'foxy-builder'),
             ]
         );
@@ -170,7 +173,7 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
             'identity.state',
             [
                 'label'   => __('State', 'foxy-builder'),
-                'type'    => self::$CONTROL_TYPE_TEXT,
+                'type'    => ControlType::$TEXT,
                 'default' => __('', 'foxy-builder'),
             ]
         );
@@ -179,7 +182,7 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
             'identity.postal_code',
             [
                 'label'   => __('Postal Code', 'foxy-builder'),
-                'type'    => self::$CONTROL_TYPE_TEXT,
+                'type'    => ControlType::$TEXT,
                 'default' => __('', 'foxy-builder'),
             ]
         );
@@ -188,7 +191,7 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
             'identity.country',
             [
                 'label'   => __('Country', 'foxy-builder'),
-                'type'    => self::$CONTROL_TYPE_TEXT,
+                'type'    => ControlType::$TEXT,
                 'default' => __('', 'foxy-builder'),
             ]
         );
@@ -219,7 +222,7 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
                 "colors_name_{$i}",
                 [
                     'label'   => __('Name', 'foxy-builder'),
-                    'type'    => self::$CONTROL_TYPE_TEXT,
+                    'type'    => ControlType::$TEXT,
                     'default' => $name,
                 ]
             );
@@ -228,11 +231,59 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
                 "colors_global_{$i}",
                 [
                     'label' => __('Color', 'foxy-builder'),
-                    'type' => self::$CONTROL_TYPE_COLOR,
+                    'type' => ControlType::$COLOR,
                     'is_global' => true,
                     'default' => '#808080',
                     'selectors' => [
                         'body' => "--foxybdr-global-color-{$i}: {{VALUE}}",
+                    ],
+                    'separator' => $i < 10 ? 'after' : 'none',
+                ]
+            );
+        }
+        
+        $this->end_controls_section();
+
+
+        $this->start_controls_section(
+            'fonts',
+            [
+                'label' => __('Global Fonts', 'foxy-builder'),
+                'tab' => self::$TAB_FONTS,
+            ]
+        );
+
+        for ($i = 1; $i <= 10; $i++)
+        {
+            switch ($i)
+            {
+                case 1:  $name = __('Primary', 'foxy-builder'); break;
+                case 2:  $name = __('Secondary', 'foxy-builder'); break;
+                default: $name = __('Font #', 'foxy-builder') . (string)$i; break;
+            }
+
+            $this->add_control(
+                "fonts_name_{$i}",
+                [
+                    'label'   => __('Name', 'foxy-builder'),
+                    'type'    => ControlType::$TEXT,
+                    'default' => $name,
+                ]
+            );
+            
+            $this->add_control(
+                "fonts_global_{$i}",
+                [
+                    'label' => __('Font', 'foxy-builder'),
+                    'type' => ControlType::$FONT,
+                    'is_global' => true,
+                    'default' => [
+                        'group' => 'system',
+                        'id' => 'Arial',
+                        'value' => 'Arial',
+                    ],
+                    'selectors' => [
+                        'body' => "--foxybdr-global-font-{$i}: {{VALUE}}",
                     ],
                     'separator' => $i < 10 ? 'after' : 'none',
                 ]
@@ -254,7 +305,7 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
             'defaultstyles_min_height',
             [
                 'label'   => __('Min Height', 'foxy-builder'),
-                'type'    => self::$CONTROL_TYPE_NUMBER,
+                'type'    => ControlType::$NUMBER,
                 'default' => 0,
             ]
         );
@@ -274,7 +325,7 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
             'breakpoints_tablet',
             [
                 'label'   => __('Tablet', 'foxy-builder'),
-                'type'    => self::$CONTROL_TYPE_NUMBER,
+                'type'    => ControlType::$NUMBER,
                 'default' => 1024,
             ]
         );
@@ -283,7 +334,7 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
             'breakpoints_mobile',
             [
                 'label'   => __('Mobile', 'foxy-builder'),
-                'type'    => self::$CONTROL_TYPE_NUMBER,
+                'type'    => ControlType::$NUMBER,
                 'default' => 767,
             ]
         );

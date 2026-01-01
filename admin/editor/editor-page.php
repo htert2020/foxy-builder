@@ -337,6 +337,126 @@ ThePage::instance()->init();
 		</div>
 	</script>
 
+	<script id="foxybdr-tmpl-input-font" type="text/html">
+		<div class="foxybdr-input-font">
+			<div class="foxybdr-global-button">
+				<span class="dashicons dashicons-admin-site-alt3"></span>
+				<div class="foxybdr-global-dropdown foxybdr-control-dropdown">
+					<div class="foxybdr-title-bar">
+						<div>
+							<span class="foxybdr-title">Global Fonts</span>
+						</div>
+						<div>
+							<span class="dashicons dashicons-admin-generic"></span>
+							<span class="dashicons dashicons-trash"></span>
+						</div>
+					</div>
+					<div class="foxybdr-body">
+					</div>
+				</div>
+			</div>
+			<div class="foxybdr-font-button">
+				<span class="foxybdr-font-name"></span>
+				<div class="foxybdr-custom-dropdown foxybdr-control-dropdown">
+					<div class="foxybdr-title-bar">
+						<div>
+							<span class="foxybdr-title">Font Picker</span>
+						</div>
+						<div>
+							<span class="dashicons dashicons-trash"></span>
+						</div>
+					</div>
+					<div class="foxybdr-body">
+					</div>
+				</div>
+			</div>
+		</div>
+	</script>
+
+	<script id="foxybdr-tmpl-input-font-picker" type="text/html">
+		<div class="foxybdr-input-font-picker">
+			<div class="foxybdr-search-bar">
+				<input type="text" />
+			</div>
+			<div class="foxybdr-font-list">
+			</div>
+			<div class="foxybdr-empty-message foxybdr-hide">No fonts found.</div>
+		</div>
+	</script>
+
+	<script id="foxybdr-tmpl-input-font-global-row" type="text/html">
+		<div class="foxybdr-input-font-global-row">
+			<div>
+				<div class="foxybdr-name"></div>
+				<div class="foxybdr-font"></div>
+			</div>
+			<div>
+				<span class="dashicons dashicons-yes"></span>
+			</div>
+		</div>
+	</script>
+
+	<script id="foxybdr-tmpl-input-icons" type="text/html">
+		<div class="foxybdr-input-icons">
+			<i class=""></i>
+			<span class="dashicons dashicons-insert"></span>
+			<span class="dashicons dashicons-trash"></span>
+		</div>
+	</script>
+
+	<script id="foxybdr-tmpl-input-icons-dialog" type="text/html">
+		<div class="foxybdr-input-icons-dlg">
+			<div class="foxybdr-dlg-box">
+				<div class="foxybdr-header">
+					<span class="foxybdr-title">Select Icon</span>
+					<span class="dashicons dashicons-no"></span>
+				</div>
+				<div class="foxybdr-body">
+					<div class="foxybdr-side-panel">
+						<div></div>
+					</div>
+					<div class="foxybdr-main-panel">
+						<div class="foxybdr-search-bar">
+							<input type="text" placeholder="Search..." />
+						</div>
+						<div class="foxybdr-icon-list">
+							<div class="foxybdr-grid"></div>
+						</div>
+						<div class="foxybdr-empty-message foxybdr-hide">No icons found.</div>
+					</div>
+				</div>
+				<div class="foxybdr-footer">
+					<button class="foxybdr-select-button">Select</button>
+				</div>
+			</div>
+		</div>
+	</script>
+
+	<script id="foxybdr-tmpl-input-group-inline" type="text/html">
+		<div class="foxybdr-input-group-inline foxybdr-control-wrapper">
+		</div>
+	</script>
+
+	<script id="foxybdr-tmpl-input-group-with-dropdown" type="text/html">
+		<div class="foxybdr-input-group-with-dropdown">
+			<div class="foxybdr-group-button">
+				<span class="dashicons dashicons-edit"></span>
+				<div class="foxybdr-group-dropdown foxybdr-control-dropdown">
+					<div class="foxybdr-title-bar">
+						<div>
+							<span class="foxybdr-title"></span>
+						</div>
+						<div>
+							<span class="dashicons dashicons-trash"></span>
+						</div>
+					</div>
+					<div class="foxybdr-body foxybdr-control-wrapper">
+					</div>
+				</div>
+			</div>
+		</div>
+	</script>
+
 <?php
 
 	wp_footer();
