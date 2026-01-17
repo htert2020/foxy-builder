@@ -36,4 +36,14 @@ class ControlType
     public static $ICONS = 'ICONS';
 
     public static $GROUP = 'GROUP';
+
+    public static $REPEATER = 'REPEATER';
+
+    public static $HIDDEN = 'HIDDEN';
+
+    public static $HEADING = 'HEADING';
+
+    public static $DIVIDER = 'DIVIDER';
+
+    public static $RAW_HTML = 'RAW_HTML';
 }

@@ -6,6 +6,10 @@
     flex-wrap: wrap;
 }
 
+.foxybdr-control.foxybdr-hide {
+    display: none;
+}
+
     .foxybdr-control-prompt {
         width: 50%;
         display: flex;
@@ -658,6 +662,10 @@
             max-height: 260px;
         }
 
+            .foxybdr-input-color.foxybdr-prevent-empty .foxybdr-global-dropdown .foxybdr-title-bar .dashicons.dashicons-trash {
+                display: none;
+            }
+
             .foxybdr-input-color .foxybdr-global-dropdown .foxybdr-body {
                 padding: 0px;
                 overflow-y: auto;
@@ -670,7 +678,8 @@
             width: 246px;
         }
 
-            .foxybdr-input-color.foxybdr-is-global .foxybdr-custom-dropdown .foxybdr-title-bar .dashicons.dashicons-trash {
+            .foxybdr-input-color.foxybdr-is-global .foxybdr-custom-dropdown .foxybdr-title-bar .dashicons.dashicons-trash,
+            .foxybdr-input-color.foxybdr-prevent-empty .foxybdr-custom-dropdown .foxybdr-title-bar .dashicons.dashicons-trash {
                 display: none;
             }
 
@@ -716,9 +725,10 @@
             top: var(--foxybdr-position-y);
             width: 18px;
             height: 18px;
-            border: 2px solid #c0c0c0;
+            border: 2px solid #808080;
             border-radius: 50%;
             transform: translate(-50%, -50%);
+            mix-blend-mode: difference;
             --foxybdr-position-x: 0%;
             --foxybdr-position-y: 0%;
         }
@@ -1493,3 +1503,169 @@
         flex-direction: column;
         gap: 8px;
     }
+
+.foxybdr-input-repeater {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+}
+
+    .foxybdr-input-repeater > .foxybdr-item-container {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .foxybdr-input-repeater > .foxybdr-add-button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        border-width: 0px;
+        border-radius: 4px;
+        padding: 8px;
+        background-color: var(--foxybdr-input-bg-color);
+        color: var(--foxybdr-popup-input-bg-color);
+        cursor: pointer;
+        transition: all linear 0.2s;
+    }
+
+    .foxybdr-input-repeater > .foxybdr-add-button:hover {
+        background-color: var(--foxybdr-popup-input-bg-color);
+        color: var(--foxybdr-input-t-color);
+    }
+
+        .foxybdr-input-repeater > .foxybdr-add-button > .dashicons {
+            width: auto;
+            height: auto;
+            font-size: 16px;
+            line-height: 1.0;
+        }
+
+        .foxybdr-input-repeater > .foxybdr-add-button > span:nth-child(2) {
+            font-size: 12px;
+            line-height: 1.0;
+        }
+
+.foxybdr-input-repeater-item {
+}
+
+    .foxybdr-input-repeater-item > .foxybdr-header {
+        display: flex;
+        background-color: var(--foxybdr-input-bg-color);
+    }
+
+        .foxybdr-input-repeater-item > .foxybdr-header > :not(:last-child) {
+            border-style: solid;
+            border-color: var(--foxybdr-general-bg-color);
+            border-width: 0px 1px 0px 0px;
+        }
+
+        .foxybdr-input-repeater-item > .foxybdr-header > .foxybdr-label {
+            display: flex;
+            align-items: center;
+            flex-grow: 1;
+            flex-shrink: 1;
+            padding: 8px;
+            color: var(--foxybdr-input-t-color);
+            font-size: 12px;
+            line-height: 1.0;
+            cursor: pointer;
+            transition: all linear 0.2s;
+        }
+
+        .foxybdr-input-repeater-item > .foxybdr-header > .foxybdr-label:hover {
+            background-color: var(--foxybdr-popup-input-bg-color);
+        }
+
+        .foxybdr-input-repeater-item > .foxybdr-header > .foxybdr-duplicate-button,
+        .foxybdr-input-repeater-item > .foxybdr-header > .foxybdr-delete-button {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-grow: 0;
+            flex-shrink: 0;
+            padding: 8px;
+            color: var(--foxybdr-popup-input-bg-color);
+            cursor: pointer;
+            transition: all linear 0.2s;
+        }
+
+        .foxybdr-input-repeater-item > .foxybdr-header > .foxybdr-duplicate-button:hover,
+        .foxybdr-input-repeater-item > .foxybdr-header > .foxybdr-delete-button:hover {
+            background-color: var(--foxybdr-popup-input-bg-color);
+            color: var(--foxybdr-input-t-color);
+        }
+
+            .foxybdr-input-repeater-item > .foxybdr-header > .foxybdr-duplicate-button > .dashicons,
+            .foxybdr-input-repeater-item > .foxybdr-header > .foxybdr-delete-button > .dashicons {
+                width: auto;
+                height: auto;
+                font-size: 16px;
+                line-height: 1.0;
+            }
+
+            .foxybdr-input-repeater.foxybdr-delete-disabled > .foxybdr-item-container > .foxybdr-input-repeater-item > .foxybdr-header > .foxybdr-delete-button {
+                display: none;
+            }
+
+    .foxybdr-input-repeater-item > .foxybdr-body {
+        display: none;
+        flex-direction: column;
+        gap: 8px;
+        border-style: solid;
+        border-color: var(--foxybdr-general-br-color);
+        border-width: 0px 1px 1px 1px;
+        padding: 8px;
+    }
+
+    .foxybdr-input-repeater-item.foxybdr-expand > .foxybdr-body {
+        display: flex;
+    }
+
+.foxybdr-input-heading {
+    margin: 16px 0px;
+    border-radius: 4px 4px 0px 0px;
+    padding: 8px;
+    background-color: var(--foxybdr-popup-input-bg-color);
+    color: var(--foxybdr-input-t-color);
+    font-size: 12px;
+    line-height: 1.0;
+}
+
+.foxybdr-input-heading.foxybdr-hide {
+    display: none;
+}
+
+.foxybdr-input-separator {
+    width: 100%;
+    height: 1px;
+    margin: 16px 0px;
+    border-style: solid;
+    border-color: var(--foxybdr-general-br-color);
+    border-width: 1px 0px 0px 0px;
+}
+
+.foxybdr-input-separator.foxybdr-hide {
+    display: none;
+}
+
+.foxybdr-input-separator.foxybdr-margin-top-small {
+    margin-top: 8px;
+}
+
+.foxybdr-input-separator.foxybdr-margin-bottom-small {
+    margin-bottom: 8px;
+}
+
+.foxybdr-input-description {
+    color: var(--foxybdr-popup-input-bg-color);
+    font-size: 10px;
+    line-height: 1.2;
+}
+
+.foxybdr-input-description.foxybdr-hide {
+    display: none;
+}

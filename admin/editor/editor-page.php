@@ -133,6 +133,43 @@ ThePage::instance()->init();
 		</div>
 	</script>
 
+	<script id="foxybdr-tmpl-settings-layout-tabs" type="text/html">
+		<div class="foxybdr-settings-layout-tabs">
+			<div class="foxybdr-tabs"></div>
+			<div class="foxybdr-tab-body"></div>
+		</div>
+	</script>
+
+	<script id="foxybdr-tmpl-settings-layout-popover" type="text/html">
+		<div class="foxybdr-control">
+			<div class="foxybdr-control-prompt">
+				<div>
+					<div class="foxybdr-control-label"></div>
+				</div>
+				<div></div>
+			</div>
+			<div class="foxybdr-control-input">
+				<div class="foxybdr-input-group-with-dropdown">
+					<div class="foxybdr-group-button">
+						<span class="dashicons dashicons-edit"></span>
+						<div class="foxybdr-group-dropdown foxybdr-control-dropdown">
+							<div class="foxybdr-title-bar">
+								<div>
+									<span class="foxybdr-title"></span>
+								</div>
+								<div>
+									<span class="dashicons dashicons-trash"></span>
+								</div>
+							</div>
+							<div class="foxybdr-body foxybdr-control-wrapper">
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</script>
+
 	<script id="foxybdr-tmpl-widgets-module" type="text/html">
 		<div class="foxybdr-widgets-module">
 			<div class="foxybdr-header"></div>
@@ -455,6 +492,38 @@ ThePage::instance()->init();
 				</div>
 			</div>
 		</div>
+	</script>
+
+	<script id="foxybdr-tmpl-input-repeater" type="text/html">
+		<div class="foxybdr-input-repeater">
+			<div class="foxybdr-item-container"></div>
+			<div class="foxybdr-add-button">
+				<span class="dashicons dashicons-insert"></span>
+				<span>Add Item</span>
+			</div>
+		</div>
+	</script>
+
+	<script id="foxybdr-tmpl-input-repeater-item" type="text/html">
+		<div class="foxybdr-input-repeater-item">
+			<div class="foxybdr-header">
+				<div class="foxybdr-label" draggable="true">
+					<span>Item</span>
+				</div>
+				<div class="foxybdr-duplicate-button">
+					<span class="dashicons dashicons-insert"></span>
+				</div>
+				<div class="foxybdr-delete-button">
+					<span class="dashicons dashicons-trash"></span>
+				</div>
+			</div>
+			<div class="foxybdr-body">
+			</div>
+		</div>
+	</script>
+
+	<script id="foxybdr-tmpl-input-heading" type="text/html">
+		<div class="foxybdr-input-heading"></div>
 	</script>
 
 <?php

@@ -197,6 +197,9 @@ FoxyControls.load = function()
         };
 
         controlElement = null;
+        #beforeSeparatorElement = null;
+        #afterSeparatorElement = null;
+        #descriptionElement = null;
 
         constructor(name, setting, value)
         {
@@ -211,9 +214,30 @@ FoxyControls.load = function()
 
         create(parentElement)
         {
-            this.controlElement = FoxyApp.elementCache.cloneElement('foxybdr-tmpl-control');
+            if ([ 'before', 'both' ].includes(this.setting.separator))
+            {
+                this.#beforeSeparatorElement = document.createElement('div');
+                this.#beforeSeparatorElement.classList.add('foxybdr-input-separator');
+                parentElement.appendChild(this.#beforeSeparatorElement);
+            }
 
+            this.controlElement = FoxyApp.elementCache.cloneElement('foxybdr-tmpl-control');
             parentElement.appendChild(this.controlElement);
+
+            if (this.setting.description !== undefined)
+            {
+                this.#descriptionElement = document.createElement('div');
+                this.#descriptionElement.classList.add('foxybdr-input-description');
+                this.#descriptionElement.innerText = this.setting.description;
+                parentElement.appendChild(this.#descriptionElement);
+            }
+
+            if ([ 'after', 'both' ].includes(this.setting.separator))
+            {
+                this.#afterSeparatorElement = document.createElement('div');
+                this.#afterSeparatorElement.classList.add('foxybdr-input-separator');
+                parentElement.appendChild(this.#afterSeparatorElement);
+            }
 
             this.controlElement.querySelector('.foxybdr-control-label').innerText = this.setting.label !== undefined ? this.setting.label : '';
 
@@ -371,6 +395,36 @@ FoxyControls.load = function()
             this.onDisplayValueChanged(d.displayValue, d.placeholderValue);
         }
 
+        show(show)
+        {
+            if (show)
+            {
+                this.controlElement.classList.remove('foxybdr-hide');
+
+                if (this.#beforeSeparatorElement)
+                    this.#beforeSeparatorElement.classList.remove('foxybdr-hide');
+                
+                if (this.#afterSeparatorElement)
+                    this.#afterSeparatorElement.classList.remove('foxybdr-hide');
+                
+                if (this.#descriptionElement)
+                    this.#descriptionElement.classList.remove('foxybdr-hide');
+            }
+            else
+            {
+                this.controlElement.classList.add('foxybdr-hide');
+
+                if (this.#beforeSeparatorElement)
+                    this.#beforeSeparatorElement.classList.add('foxybdr-hide');
+                
+                if (this.#afterSeparatorElement)
+                    this.#afterSeparatorElement.classList.add('foxybdr-hide');
+                
+                if (this.#descriptionElement)
+                    this.#descriptionElement.classList.add('foxybdr-hide');
+            }
+        }
+
         destroy()
         {
             super.destroy();
@@ -379,6 +433,24 @@ FoxyControls.load = function()
             {
                 this.controlElement.remove();
                 this.controlElement = null;
+            }
+
+            if (this.#beforeSeparatorElement !== null)
+            {
+                this.#beforeSeparatorElement.remove();
+                this.#beforeSeparatorElement = null;
+            }
+
+            if (this.#afterSeparatorElement !== null)
+            {
+                this.#afterSeparatorElement.remove();
+                this.#afterSeparatorElement = null;
+            }
+
+            if (this.#descriptionElement !== null)
+            {
+                this.#descriptionElement.remove();
+                this.#descriptionElement = null;
             }
         }
     };
@@ -958,11 +1030,7 @@ FoxyControls.load = function()
             else if (e.type === 'mousemove' && this.#isDragging)
             {
                 let newPosPercent = this.#originalState.handlePosPercent + (e.clientX - this.#originalState.x) / this.#trackElement.offsetWidth * 100.0;
-
-                if (newPosPercent < 0.0)
-                    newPosPercent = 0.0;
-                if (newPosPercent > 100.0)
-                    newPosPercent = 100.0;
+                newPosPercent = Math.min(Math.max(newPosPercent, 0), 100);
 
                 if (this.#unitSelectElement.selectedIndex === -1)
                     this.#unitSelectElement.selectedIndex = 0;
@@ -993,10 +1061,11 @@ FoxyControls.load = function()
                 if (e.target.draggable === false)
                     e.preventDefault();
             }
-            else if (e.type === 'click' && e.currentTarget === this.#trackElement)
+            else if (e.type === 'click' && e.currentTarget === this.#trackElement && e.target === this.#trackElement)
             {
                 let trackRect = this.#trackElement.getBoundingClientRect();
                 let newPosPercent = (e.clientX - trackRect.left) / this.#trackElement.offsetWidth * 100.0;
+                newPosPercent = Math.min(Math.max(newPosPercent, 0), 100);
 
                 if (this.#unitSelectElement.selectedIndex === -1)
                     this.#unitSelectElement.selectedIndex = 0;
@@ -1398,6 +1467,12 @@ FoxyControls.load = function()
                 }
             }
 
+            if (this.setting.prevent_empty === true)
+            {
+                this.#colorElement.classList.add('foxybdr-prevent-empty');
+                this.#colorPicker.allowEmptyColor(false);
+            }
+
             this.registerEvent(document.body, 'click');
             this.registerEvent(this.#customDropdownElement.querySelector('.dashicons-trash'), 'click');
             this.registerEvent(this.#globalDropdownElement.querySelector('.dashicons-trash'), 'click');
@@ -1699,7 +1774,8 @@ FoxyControls.load = function()
                 if (e.target.draggable === false)
                     e.preventDefault();
             }
-            else if (e.type === 'click' && [ this.#mainTrackElement, this.#hueTrackElement, this.#opacityTrackElement ].includes(e.currentTarget))
+            else if (e.type === 'click' && [ this.#mainTrackElement, this.#hueTrackElement, this.#opacityTrackElement ].includes(e.currentTarget) &&
+                    e.target.classList.contains('foxybdr-handle') === false)
             {
                 let trackRect = e.currentTarget.getBoundingClientRect();
 
@@ -3096,7 +3172,6 @@ FoxyControls.load = function()
 
         hide()
         {
-            // Free up some memory. 1,000+ icons means 1,000+ bitmaps in memory.
             this.#dialogElement.querySelector('.foxybdr-icon-list .foxybdr-grid').innerHTML = '';
 
             this.#dialogElement.classList.remove('foxybdr-show');
@@ -3326,6 +3401,8 @@ FoxyControls.load = function()
                 control.addEventListener(this);
                 this.#controls.push(control);
             }
+
+            this.#disableConditionalSettings();
         }
 
         handleEvent(e)
@@ -3380,6 +3457,25 @@ FoxyControls.load = function()
             }
 
             this.setDisplayValue(structuredClone(this.#groupValue));
+
+            this.#disableConditionalSettings();
+        }
+
+        #disableConditionalSettings()
+        {
+            for (let control of this.#controls)
+            {
+                let settingName = control.name;
+                let settingParams = this.#groupControlDef.settings[settingName];
+                let show = true;
+
+                if (settingParams.condition !== undefined)
+                {
+                    show = FoxyApp.Function.evaluateCondition(settingParams.condition, this.#groupValue, this.#groupControlDef.settings);
+                }
+
+                control.show(show);
+            }
         }
 
         destroy()
@@ -3394,6 +3490,500 @@ FoxyControls.load = function()
                 control.destroy();
 
             this.#controls = [];
+        }
+    };
+
+    FoxyControls.Class.Repeater = class extends FoxyControls.Class.BaseControl
+    {
+        #repeaterElement = null;
+        #itemContainerElement = null;
+
+        #dragDropProcessor = null;
+
+        #repeaterControlDef = null;
+
+        #repeaterValue = [];
+
+        constructor(name, setting, value)
+        {
+            super(name, setting, value);
+        }
+
+        create(parentElement)
+        {
+            super.create(parentElement);
+
+            this.#repeaterControlDef = this.setting.fields;
+
+            this.controlElement.classList.add('foxybdr-control-multirow');
+
+            this.#repeaterElement = FoxyApp.elementCache.cloneElement('foxybdr-tmpl-input-repeater');
+            this.controlElement.querySelector('.foxybdr-control-input').appendChild(this.#repeaterElement);
+
+            this.#itemContainerElement = this.#repeaterElement.querySelector('.foxybdr-item-container');
+
+            this.#repeaterValue = structuredClone(this.getDisplayValue().displayValue);
+
+            for (let item of this.#repeaterValue)
+            {
+                let itemElement = this.#createItemElement(item);
+
+                this.#itemContainerElement.appendChild(itemElement);
+            }
+
+            this.#updateDeleteDisabled();
+
+            let addButtonElement = this.#repeaterElement.querySelector('.foxybdr-input-repeater > .foxybdr-add-button');
+            this.registerEvent(addButtonElement, 'click');
+
+            this.#dragDropProcessor = new FoxyApp.Class.UI.ElementDragDrop();
+            this.#dragDropProcessor.create(this.#itemContainerElement, this.controlElement.closest('.foxybdr-settings-module > .foxybdr-tab-body'), 8.0, '%');
+            this.#dragDropProcessor.addSourceType('.foxybdr-label', null, null);
+            this.#dragDropProcessor.addEventListener(this);
+        }
+
+        handleEvent(e)
+        {
+            if (e.type === 'click' && e.currentTarget.classList.contains('foxybdr-label'))
+            {
+                e.currentTarget.closest('.foxybdr-input-repeater-item').classList.toggle('foxybdr-expand');
+            }
+            else if (e.type === 'click' && e.currentTarget.classList.contains('foxybdr-duplicate-button'))
+            {
+                let itemElement = e.currentTarget.closest('.foxybdr-input-repeater-item');
+
+                let index;
+                for (let i = 0; i < this.#itemContainerElement.children.length; i++)
+                {
+                    if (this.#itemContainerElement.children[i] === itemElement)
+                    {
+                        index = i;
+                        break;
+                    }
+                }
+
+                let newItem = structuredClone(this.#repeaterValue[index]);
+                let newItemElement = this.#createItemElement(newItem);
+
+                if (index < this.#repeaterValue.length - 1)
+                {
+                    this.#repeaterValue.splice(index + 1, 0, newItem);
+                    this.#itemContainerElement.insertBefore(newItemElement, itemElement.nextSibling);
+                }
+                else
+                {
+                    this.#repeaterValue.push(newItem);
+                    this.#itemContainerElement.appendChild(newItemElement);
+                }
+
+                this.#updateDeleteDisabled();
+
+                this.setDisplayValue(structuredClone(this.#repeaterValue));
+            }
+            else if (e.type === 'click' && e.currentTarget.classList.contains('foxybdr-delete-button'))
+            {
+                let itemElement = e.currentTarget.closest('.foxybdr-input-repeater-item');
+
+                for (let i = 0; i < this.#itemContainerElement.children.length; i++)
+                {
+                    if (this.#itemContainerElement.children[i] === itemElement)
+                    {
+                        this.#repeaterValue.splice(i, 1);
+                        this.#destroyItemElement(itemElement);
+                        itemElement.remove();
+                        break;
+                    }
+                }
+
+                this.#updateDeleteDisabled();
+
+                this.setDisplayValue(structuredClone(this.#repeaterValue));
+            }
+            else if (e.type === 'click' && e.currentTarget.classList.contains('foxybdr-add-button'))
+            {
+                let newItem = {};
+                this.#repeaterValue.push(newItem);
+
+                let itemElement = this.#createItemElement(newItem);
+                this.#itemContainerElement.appendChild(itemElement);
+
+                this.#updateDeleteDisabled();
+
+                this.setDisplayValue(structuredClone(this.#repeaterValue));
+            }
+            else if (e.type === 'repeater-item-change')
+            {
+                let index;
+
+                for (let i = 0; i < this.#itemContainerElement.children.length; i++)
+                {
+                    if (this.#itemContainerElement.children[i].foxybdrRepeaterItem === e.repeaterItem)
+                    {
+                        index = i;
+                        break;
+                    }
+                }
+
+                if (e.value !== null)
+                    this.#repeaterValue[index][e.name] = e.value;
+                else
+                    delete this.#repeaterValue[index][e.name];
+
+                this.#updateLabel(this.#itemContainerElement.children[index], this.#repeaterValue[index]);
+
+                this.setDisplayValue(structuredClone(this.#repeaterValue));
+            }
+            else if (e.type === 'element-drop' && e.currentTarget === this.#dragDropProcessor)
+            {
+                if (e.sourceElement.classList.contains('foxybdr-label') && this.#repeaterElement.contains(e.sourceElement))
+                {
+                    let sourceElement = e.sourceElement.closest('.foxybdr-input-repeater-item');
+
+                    let sourceIndex;
+                    let targetIndex;
+
+                    for (let i = 0; i < this.#itemContainerElement.children.length; i++)
+                    {
+                        if (this.#itemContainerElement.children[i] === sourceElement)
+                        {
+                            sourceIndex = i;
+                        }
+
+                        if (this.#itemContainerElement.children[i] === e.targetElement)
+                        {
+                            targetIndex = i;
+                        }
+                    }
+
+                    if (sourceIndex !== targetIndex)
+                    {
+                        let sourceItem = this.#repeaterValue[sourceIndex];
+
+                        let newRepeaterValue = [];
+                        for (let i = 0; i < this.#repeaterValue.length; i++)
+                        {
+                            if (i === sourceIndex)
+                                continue;
+
+                            if (i === targetIndex && e.insertBefore === true)
+                                newRepeaterValue.push(sourceItem);
+
+                            newRepeaterValue.push(this.#repeaterValue[i]);
+
+                            if (i === targetIndex && e.insertBefore === false)
+                                newRepeaterValue.push(sourceItem);
+                        }
+
+                        this.#repeaterValue = newRepeaterValue;
+
+                        this.#itemContainerElement.insertBefore(sourceElement, e.insertBefore === true ? e.targetElement : e.targetElement.nextSibling);
+
+                        this.setDisplayValue(structuredClone(this.#repeaterValue));
+                    }
+                }
+            }
+            else if (e.type === 'device-change')
+            {
+                for (let i = 0; i < this.#itemContainerElement.children.length; i++)
+                    this.#itemContainerElement.children[i].foxybdrRepeaterItem.handleEvent(e);
+            }
+            else if (e.type === 'control-device-change')
+            {
+                this.sendEvent(e);
+            }
+
+            super.handleEvent(e);
+        }
+
+        #createItemElement(item)
+        {
+            let itemElement = FoxyApp.elementCache.cloneElement('foxybdr-tmpl-input-repeater-item');
+            let bodyElement = itemElement.querySelector('.foxybdr-body');
+
+            this.#updateLabel(itemElement, item);
+
+            let repeaterItem = new FoxyControls.Class.RepeaterItem(item, this.#repeaterControlDef);
+            repeaterItem.create(bodyElement);
+            repeaterItem.addEventListener(this);
+
+            itemElement.foxybdrRepeaterItem = repeaterItem;
+
+            let labelElement = itemElement.querySelector('.foxybdr-input-repeater-item > .foxybdr-header > .foxybdr-label');
+            this.registerEvent(labelElement, 'click');
+
+            let duplicateButtonElement = itemElement.querySelector('.foxybdr-input-repeater-item > .foxybdr-header > .foxybdr-duplicate-button');
+            this.registerEvent(duplicateButtonElement, 'click');
+
+            let deleteButtonElement = itemElement.querySelector('.foxybdr-input-repeater-item > .foxybdr-header > .foxybdr-delete-button');
+            this.registerEvent(deleteButtonElement, 'click');
+
+            return itemElement;
+        }
+
+        #destroyItemElement(itemElement)
+        {
+            itemElement.foxybdrRepeaterItem.destroy();
+            delete itemElement.foxybdrRepeaterItem;
+
+            let labelElement = itemElement.querySelector('.foxybdr-input-repeater-item > .foxybdr-header > .foxybdr-label');
+            this.unregisterEvent(labelElement, 'click');
+
+            let duplicateButtonElement = itemElement.querySelector('.foxybdr-input-repeater-item > .foxybdr-header > .foxybdr-duplicate-button');
+            this.unregisterEvent(duplicateButtonElement, 'click');
+
+            let deleteButtonElement = itemElement.querySelector('.foxybdr-input-repeater-item > .foxybdr-header > .foxybdr-delete-button');
+            this.unregisterEvent(deleteButtonElement, 'click');
+        }
+
+        #updateLabel(itemElement, item)
+        {
+            let label = 'Item';
+
+            let titleField = this.setting.title_field;
+
+            if (titleField !== undefined && typeof titleField === 'string')
+            {
+                if (titleField[0] === '"')
+                {
+                    label = titleField.replaceAll('"', '');
+                }
+                else if (this.#repeaterControlDef.settings[titleField] !== undefined)
+                {
+                    let respValue = FoxyApp.Function.evaluateValue(item[titleField], this.#repeaterControlDef.settings[titleField]);
+
+                    if (typeof respValue.desktop === 'string' || typeof respValue.desktop === 'number')
+                        label = String(respValue.desktop);
+                    else if (respValue.desktop.value !== undefined)
+                        label = String(respValue.desktop.value);
+                }
+            }
+
+            itemElement.querySelector('.foxybdr-input-repeater-item > .foxybdr-header > .foxybdr-label > span').innerText = label;
+        }
+
+        #updateDeleteDisabled()
+        {
+            if (this.setting.prevent_empty !== true)
+                return;
+
+            if (this.#repeaterValue.length === 1)
+                this.#repeaterElement.classList.add('foxybdr-delete-disabled');
+            else
+                this.#repeaterElement.classList.remove('foxybdr-delete-disabled');
+        }
+
+        destroy()
+        {
+            super.destroy();
+
+            for (let i = 0; i < this.#itemContainerElement.children.length; i++)
+            {
+                let itemElement = this.#itemContainerElement.children[i];
+
+                this.#destroyItemElement(itemElement);
+            }
+
+            this.#repeaterElement = null;
+            this.#itemContainerElement = null;
+
+            if (this.#dragDropProcessor !== null)
+            {
+                this.#dragDropProcessor.destroy();
+                this.#dragDropProcessor = null;
+            }
+        }
+    };
+
+    FoxyControls.Class.RepeaterItem = class extends FoxyApp.Class.UI.Component.BaseComponent
+    {
+        #item = null;
+
+        #repeaterControlDef = null;
+
+        #controls = [];
+
+        constructor(item, repeaterControlDef)
+        {
+            super();
+
+            this.#item = structuredClone(item);
+            this.#repeaterControlDef = repeaterControlDef;
+        }
+
+        create(parentElement)
+        {
+            for (let settingName of this.#repeaterControlDef.orderedSettings)
+            {
+                let settingParams = this.#repeaterControlDef.settings[settingName];
+
+                let value = this.#item[settingName] !== undefined ? this.#item[settingName] : null;
+
+                let control = FoxyControls.Class.Factory.create(settingParams.type, settingName, settingParams, value);
+                control.create(parentElement);
+                control.addEventListener(this);
+                this.#controls.push(control);
+            }
+
+            this.#disableConditionalSettings();
+        }
+
+        handleEvent(e)
+        {
+            if (e.type === 'control-change')
+            {
+                if (e.value !== null)
+                    this.#item[e.name] = e.value;
+                else
+                    delete this.#item[e.name];
+
+                this.sendEvent({
+                    type: 'repeater-item-change',
+                    repeaterItem: this,
+                    name: e.name,
+                    value: e.value
+                });
+
+                this.#disableConditionalSettings();
+            }
+            else if (e.type === 'device-change')
+            {
+                for (let control of this.#controls)
+                    control.handleEvent(e);
+            }
+            else if (e.type === 'control-device-change')
+            {
+                this.sendEvent(e);
+            }
+        }
+
+        #disableConditionalSettings()
+        {
+            for (let control of this.#controls)
+            {
+                let settingName = control.name;
+                let settingParams = this.#repeaterControlDef.settings[settingName];
+                let show = true;
+
+                if (settingParams.condition !== undefined)
+                {
+                    show = FoxyApp.Function.evaluateCondition(settingParams.condition, this.#item, this.#repeaterControlDef.settings);
+                }
+
+                control.show(show);
+            }
+        }
+
+        destroy()
+        {
+            super.destroy();
+
+            for (let control of this.#controls)
+                control.destroy();
+
+            this.#controls = [];
+        }
+    };
+
+    FoxyControls.Class.DatalessControl = class extends FoxyApp.Class.UI.Component.BaseComponent
+    {
+        name = null;
+        setting = null;
+        value = null;
+
+        controlElement = null;
+
+        constructor(name, setting, value)
+        {
+            super();
+
+            this.name = name;
+            this.setting = setting;
+            this.value = value;
+        }
+
+        create(parentElement) {}
+
+        handleEvent(e) {}
+
+        setValue(newValue) {}
+        
+        show(show)
+        {
+            if (this.controlElement === null)
+                return;
+
+            if (show)
+                this.controlElement.classList.remove('foxybdr-hide');
+            else
+                this.controlElement.classList.add('foxybdr-hide');
+        }
+
+        destroy()
+        {
+            super.destroy();
+
+            if (this.controlElement)
+            {
+                this.controlElement.remove();
+                this.controlElement = null;
+            }
+        }
+    };
+
+    FoxyControls.Class.Hidden = class extends FoxyControls.Class.DatalessControl
+    {
+    };
+
+    FoxyControls.Class.Heading = class extends FoxyControls.Class.DatalessControl
+    {
+        constructor(name, setting, value)
+        {
+            super(name, setting, value);
+        }
+
+        create(parentElement)
+        {
+            this.controlElement = FoxyApp.elementCache.cloneElement('foxybdr-tmpl-input-heading');
+            parentElement.appendChild(this.controlElement);
+
+            this.controlElement.innerText = this.setting.label;
+        }
+    };
+
+    FoxyControls.Class.Divider = class extends FoxyControls.Class.DatalessControl
+    {
+        constructor(name, setting, value)
+        {
+            super(name, setting, value);
+        }
+
+        create(parentElement)
+        {
+            this.controlElement = document.createElement('div');
+            this.controlElement.classList.add('foxybdr-input-separator');
+            parentElement.appendChild(this.controlElement);
+
+            if (this.setting.margin_top_small === true)
+                this.controlElement.classList.add('foxybdr-margin-top-small');
+            if (this.setting.margin_bottom_small === true)
+                this.controlElement.classList.add('foxybdr-margin-bottom-small');
+        }
+    };
+
+    FoxyControls.Class.RawHtml = class extends FoxyControls.Class.DatalessControl
+    {
+        constructor(name, setting, value)
+        {
+            super(name, setting, value);
+        }
+
+        create(parentElement)
+        {
+            this.controlElement = document.createElement('div');
+            parentElement.appendChild(this.controlElement);
+
+            this.controlElement.className = this.setting.content_classes;
+            this.controlElement.innerHTML = this.setting.raw;
         }
     };
 
@@ -3426,6 +4016,11 @@ FoxyControls.Class.Factory = class
             case 'FONT': return new FoxyControls.Class.Font(name, setting, value); break;
             case 'ICONS': return new FoxyControls.Class.Icons(name, setting, value); break;
             case 'GROUP': return new FoxyControls.Class.Group(name, setting, value); break;
+            case 'REPEATER': return new FoxyControls.Class.Repeater(name, setting, value); break;
+            case 'HIDDEN': return new FoxyControls.Class.Hidden(name, setting, value); break;
+            case 'HEADING': return new FoxyControls.Class.Heading(name, setting, value); break;
+            case 'DIVIDER': return new FoxyControls.Class.Divider(name, setting, value); break;
+            case 'RAW_HTML': return new FoxyControls.Class.RawHtml(name, setting, value); break;
         }
     }
 };
@@ -3465,5 +4060,10 @@ FoxyControls.controlDefaultValues = {
         'library': '',
         'value': ''
     },
-    'GROUP': {}
+    'GROUP': {},
+    'REPEATER': [],
+    'HIDDEN': '',
+    'HEADING': '',
+    'DIVIDER': '',
+    'RAW_HTML': ''
 };

@@ -6,10 +6,12 @@ if (!defined('ABSPATH'))
     exit;
 
 require_once FOXYBUILDER_PLUGIN_PATH . '/modules/controls/control-type.php';
+require_once FOXYBUILDER_PLUGIN_PATH . '/modules/controls/repeater.php';
 require_once FOXYBUILDER_PLUGIN_PATH . '/modules/group-controls/group-control-type.php';
 require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/base-widget.php';
 
 use \FoxyBuilder\Modules\Controls\ControlType;
+use \FoxyBuilder\Modules\Controls\Repeater;
 use \FoxyBuilder\Modules\GroupControls\GroupControlType;
 
 class Section extends \FoxyBuilder\Modules\Widgets\BaseWidget
@@ -80,7 +82,7 @@ class Section extends \FoxyBuilder\Modules\Widgets\BaseWidget
                 'type' => ControlType::$WYSIWYG,
             ]
         );
-        
+
         $this->add_control(
             'content_url',
             [
@@ -155,16 +157,16 @@ class Section extends \FoxyBuilder\Modules\Widgets\BaseWidget
             [
                 'label'   => __('Height', 'foxy-builder'),
                 'type'    => ControlType::$SLIDER,
-                'size_units' => [ '%', 'px', 'em' ],
+                'size_units' => [ 'px', '%', 'em' ],
                 'range' => [
-                    '%' => [
-                        'min' => 0,
-                        'max' => 100,
-                    ],
                     'px' => [
                         'min' => 0,
                         'max' => 1000,
                         'step' => 1,
+                    ],
+                    '%' => [
+                        'min' => 0,
+                        'max' => 100,
                     ],
                     'em' => [
                         'min' => 0.00,
@@ -172,10 +174,10 @@ class Section extends \FoxyBuilder\Modules\Widgets\BaseWidget
                         'step' => 0.01,
                     ],
                 ],
-                'default' => [
-                    'unit' => 'px',
-                    'size' => 40,
-                ],
+                // 'default' => [
+                //     'unit' => 'px',
+                //     'size' => 40,
+                // ],
                 'selectors' => [
                     '{{WRAPPER}} > div' => 'height: {{SIZE}}{{UNIT}}',
                 ],
@@ -259,6 +261,8 @@ class Section extends \FoxyBuilder\Modules\Widgets\BaseWidget
         );
 
         $this->end_controls_section();
+
+        $this->add_controls_background(self::$TAB_ADVANCED, 'advanced', '{{WRAPPER}} > div');
     }
 
     protected function render()

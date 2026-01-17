@@ -167,7 +167,7 @@ class Editor
                 }
             }
         }
-    
+
         wp_print_scripts([ 'wp-tinymce' ]);
     
         wp_enqueue_media();

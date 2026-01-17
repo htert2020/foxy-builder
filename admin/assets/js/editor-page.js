@@ -42,6 +42,95 @@ FoxyApp.Function.isValueEqual = function(firstObject, secondObject)
     return true;
 }
 
+FoxyApp.Function.evaluateValue = function(sparseValue, settingParams)
+{
+    if (settingParams.responsive)
+    {
+        let controlDefaultValue = FoxyControls.controlDefaultValues[settingParams.type];
+
+        let resp = {
+            desktop: controlDefaultValue,
+            tablet: controlDefaultValue,
+            mobile: controlDefaultValue
+        };
+
+        if (sparseValue !== undefined)
+        {
+            if (sparseValue.mobile !== undefined)
+                resp.mobile = sparseValue.mobile;
+
+            if (sparseValue.tablet !== undefined)
+                resp.tablet = sparseValue.tablet;
+        }
+
+        if (sparseValue !== undefined && sparseValue.desktop !== undefined)
+            resp.desktop = sparseValue.desktop;
+        else if (settingParams.default !== undefined)
+            resp.desktop = settingParams.default;
+
+        return resp;
+    }
+    else
+    {
+        let finalValue = FoxyControls.controlDefaultValues[settingParams.type];
+
+        if (sparseValue !== undefined)
+            finalValue = sparseValue;
+        else if (settingParams.default !== undefined)
+            finalValue = settingParams.default;
+
+        return { desktop: finalValue };
+    }
+}
+
+FoxyApp.Function.evaluateCondition = function(condition, sparseSettings, wSettings, disabledSettingNames)
+{
+    let result = true;
+
+    for (let key in condition)
+    {
+        let not = key.endsWith('!');
+        let varName = not ? key.substring(0, key.length - 1) : key;
+        let parts = varName.split('.');
+        let settingName = parts[0];
+        let fieldName = parts.length >= 2 ? parts[1].toLowerCase() : null;
+
+        if (disabledSettingNames !== undefined && disabledSettingNames.includes(settingName))
+            return false;
+
+        if (wSettings[settingName].condition !== undefined)
+        {
+            if (FoxyApp.Function.evaluateCondition(wSettings[settingName].condition, sparseSettings, wSettings, disabledSettingNames) === false)
+                return false;
+        }
+
+        let compareValue = condition[key];
+        let value = FoxyApp.Function.evaluateValue(sparseSettings[settingName], wSettings[settingName]).desktop;
+        if (fieldName !== null)
+        {
+            value = fieldName === 'value' && value[fieldName] === undefined ? value : value[fieldName];
+        }
+
+        let termResult;
+
+        if (typeof compareValue === 'string')
+        {
+            termResult = compareValue === String(value);
+        }
+        else if (compareValue instanceof Array)
+        {
+            termResult = compareValue.includes(String(value));
+        }
+
+        if (not)
+            termResult = !termResult;
+
+        result = result && termResult;
+    }
+
+    return result;
+}
+
 FoxyApp.Function.navigateToGlobalColors = function()
 {
     FoxyApp.View.PanelModule.siteSettingsModule.navigateToGlobalColors();
@@ -936,6 +1025,8 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule = class extends FoxyApp.Cl
             }
             
             FoxyApp.Manager.modelManager.submitCommand(this, command);
+
+            this.#disableConditionalSettings();
         }
         else if (e.type === 'device-select')
         {
@@ -983,6 +1074,8 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule = class extends FoxyApp.Cl
                     this.#tabs.push(tab);
                 }
 
+                this.#disableConditionalSettings();
+
                 if (this.#tabs.length > 0)
                     this.activateTabPage(0);
 
@@ -1003,6 +1096,65 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule = class extends FoxyApp.Cl
         this.domainType = '';
         this.domainID = null;
         this.widgetInstanceID = '';
+    }
+
+    #disableConditionalSettings()
+    {
+        if (this.widgetInstanceID === '')
+            return;
+
+        let widgetInstance = FoxyApp.Model.widgetInstanceMap[this.widgetInstanceID];
+
+        if (widgetInstance.data.widgetType !== 0)
+            return;
+
+        let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetID];
+
+        let disabledSections = [];
+        let disabledSettingNames = [];
+
+        for (let tab of widget.tabs)
+        {
+            for (let section of tab.sections)
+            {
+                if (section.condition === undefined)
+                    continue;
+
+                if (FoxyApp.Function.evaluateCondition(section.condition, widgetInstance.data.sparseSettings, widget.settings) === true)
+                    continue;
+
+                disabledSections.push(section.name);
+
+                for (let item of section.settings)
+                {
+                    if (item.type === 'setting')
+                    {
+                        disabledSettingNames.push(item.name);
+                    }
+                }
+            }
+        }
+
+        for (let settingName in widget.settings)
+        {
+            let settingParams = widget.settings[settingName];
+
+            if (disabledSettingNames.includes(settingName))
+                continue;
+
+            if (settingParams.condition !== undefined)
+            {
+                if (FoxyApp.Function.evaluateCondition(settingParams.condition, widgetInstance.data.sparseSettings, widget.settings, disabledSettingNames) === false)
+                {
+                    disabledSettingNames.push(settingName);
+                }
+            }
+        }
+
+        for (let tab of this.#tabs)
+        {
+            tab.disableConditionalSettings(disabledSections, disabledSettingNames);
+        }
     }
 
     destroy()
@@ -1120,6 +1272,14 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Tab = class extends FoxyAp
         }
     }
 
+    disableConditionalSettings(disabledSections, disabledSettingNames)
+    {
+        for (let section of this.#sections)
+        {
+            section.disableConditionalSettings(disabledSections, disabledSettingNames);
+        }
+    }
+
     getName()
     {
         return this.#tabData.name;
@@ -1153,6 +1313,7 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Tab_Section = class extend
     #sectionElement = null;
 
     #controls = [];
+    #layouts = [];
 
     #sectionIndex = null;
     #sectionData = null;
@@ -1180,31 +1341,63 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Tab_Section = class extend
 
         let sectionBodyElement = this.#sectionElement.querySelector('.foxybdr-body');
 
+        let currentLayout = null;
+
         for (let i = 0; i < this.#sectionData.settings.length; i++)
         {
-            let settingName = this.#sectionData.settings[i];
+            let item = this.#sectionData.settings[i];
 
-            let settingParams = this.#settingDefinitions[settingName];
-
-            let value = this.#settingValues[settingName] !== undefined ? this.#settingValues[settingName] : null;
-
-            if ([ 'before', 'both' ].includes(settingParams.separator))
+            switch (item.type)
             {
-                let separatorElement = document.createElement('div');
-                separatorElement.classList.add('foxybdr-separator');
-                sectionBodyElement.appendChild(separatorElement);
-            }
+                case 'setting':
+                    {
+                        let settingName = item.name;
+                        let settingParams = this.#settingDefinitions[settingName];
+                        let value = this.#settingValues[settingName] !== undefined ? this.#settingValues[settingName] : null;
+            
+                        let control = FoxyControls.Class.Factory.create(settingParams.type, settingName, settingParams, value);
+                        control.create(currentLayout !== null ? currentLayout.getParentElementForNewControl() : sectionBodyElement);
+                        control.addEventListener(this);
+                        this.#controls.push(control);
 
-            let control = FoxyControls.Class.Factory.create(settingParams.type, settingName, settingParams, value);
-            control.create(sectionBodyElement);
-            control.addEventListener(this);
-            this.#controls.push(control);
+                        if (currentLayout !== null && currentLayout.addControl !== undefined && typeof currentLayout.addControl === 'function')
+                            currentLayout.addControl(control);
+                    }
+                    break;
 
-            if ([ 'after', 'both' ].includes(settingParams.separator))
-            {
-                let separatorElement = document.createElement('div');
-                separatorElement.classList.add('foxybdr-separator');
-                sectionBodyElement.appendChild(separatorElement);
+                case 'start_controls_tabs':
+                    {
+                        currentLayout = new FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Layout.Tabs();
+                        currentLayout.create(sectionBodyElement);
+                        currentLayout.addEventListener(this);
+                        this.#layouts.push(currentLayout);
+                    }
+                    break;
+
+                case 'end_controls_tabs':
+                    currentLayout = null;
+                    break;
+
+                case 'start_controls_tab':
+                    if (currentLayout !== null)
+                        currentLayout.addTab(item.label);
+                    break;
+
+                case 'end_controls_tab':
+                    break;
+
+                case 'start_popover':
+                    {
+                        currentLayout = new FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Layout.Popover();
+                        currentLayout.create(sectionBodyElement, item.label);
+                        currentLayout.addEventListener(this);
+                        this.#layouts.push(currentLayout);
+                    }
+                    break;
+
+                case 'end_popover':
+                    currentLayout = null;
+                    break;
             }
         }
     }
@@ -1259,6 +1452,22 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Tab_Section = class extend
         }
     }
 
+    disableConditionalSettings(disabledSections, disabledSettingNames)
+    {
+        if (disabledSections.includes(this.#sectionData.name))
+        {
+            this.#sectionElement.classList.add('foxybdr-hide');
+            return;
+        }
+
+        this.#sectionElement.classList.remove('foxybdr-hide');
+
+        for (let control of this.#controls)
+        {
+            control.show(disabledSettingNames.includes(control.name) === false);
+        }
+    }
+
     destroy()
     {
         super.destroy();
@@ -1268,11 +1477,227 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Tab_Section = class extend
 
         this.#controls = [];
 
+        for (let layout of this.#layouts)
+            layout.destroy();
+
+        this.#layouts = [];
+
         if (this.#sectionElement)
         {
             this.#sectionElement.remove();
             this.#sectionElement = null;
         }
+    }
+};
+
+FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Layout = {};
+
+FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Layout.Tabs = class extends FoxyApp.Class.UI.Component.BaseComponent
+{
+    #layoutElement = null;
+    #tabsElement = null;
+    #bodyElement = null;
+
+    constructor()
+    {
+        super();
+    }
+
+    create(parentElement)
+    {
+        this.#layoutElement = FoxyApp.elementCache.cloneElement('foxybdr-tmpl-settings-layout-tabs');
+        parentElement.appendChild(this.#layoutElement);
+
+        this.#tabsElement = this.#layoutElement.querySelector('.foxybdr-tabs');
+        this.#bodyElement = this.#layoutElement.querySelector('.foxybdr-tab-body');
+    }
+
+    addTab(label)
+    {
+        let newIndex = this.#tabsElement.children.length;
+
+        let tabElement = document.createElement('div');
+        tabElement.classList.add('foxybdr-tab');
+        tabElement.setAttribute('foxybdr-index', String(newIndex));
+        tabElement.innerText = label;
+        this.#tabsElement.appendChild(tabElement);
+
+        let pageElement = document.createElement('div');
+        pageElement.classList.add('foxybdr-tab-page');
+        pageElement.setAttribute('foxybdr-index', String(newIndex));
+        this.#bodyElement.appendChild(pageElement);
+
+        if (newIndex === 0)
+        {
+            tabElement.classList.add('foxybdr-active');
+            pageElement.classList.add('foxybdr-active');
+        }
+
+        this.registerEvent(tabElement, 'click');
+    }
+
+    handleEvent(e)
+    {
+        if (e.type === 'click' && e.currentTarget.classList.contains('foxybdr-tab'))
+        {
+            for (let i = 0; i < this.#tabsElement.children.length; i++)
+            {
+                let tabElement = this.#tabsElement.children[i];
+
+                if (tabElement === e.currentTarget)
+                    tabElement.classList.add('foxybdr-active');
+                else
+                    tabElement.classList.remove('foxybdr-active');
+            }
+
+            let indexStr = e.currentTarget.getAttribute('foxybdr-index');
+
+            for (let i = 0; i < this.#bodyElement.children.length; i++)
+            {
+                let pageElement = this.#bodyElement.children[i];
+
+                if (pageElement.getAttribute('foxybdr-index') === indexStr)
+                    pageElement.classList.add('foxybdr-active');
+                else
+                    pageElement.classList.remove('foxybdr-active');
+            }
+        }
+    }
+
+    getParentElementForNewControl()
+    {
+        let childCount = this.#bodyElement.children.length;
+
+        if (childCount === 0)
+            return null;
+
+        return this.#bodyElement.children[childCount - 1];
+    }
+
+    destroy()
+    {
+        super.destroy();
+
+        if (this.#layoutElement !== null)
+        {
+            this.#layoutElement.remove();
+            this.#layoutElement = null;
+        }
+
+        this.#tabsElement = null;
+        this.#bodyElement = null;
+    }
+};
+
+FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Layout.Popover = class extends FoxyApp.Class.UI.Component.BaseComponent
+{
+    #layoutElement = null;
+    #groupButtonElement = null;
+    #groupDropdownElement = null;
+    #bodyElement = null;
+
+    #controls = [];
+
+    constructor()
+    {
+        super();
+    }
+
+    create(parentElement, label)
+    {
+        this.#layoutElement = FoxyApp.elementCache.cloneElement('foxybdr-tmpl-settings-layout-popover');
+        parentElement.appendChild(this.#layoutElement);
+
+        this.#groupButtonElement = this.#layoutElement.querySelector('.foxybdr-group-button');
+        this.#groupDropdownElement = this.#layoutElement.querySelector('.foxybdr-group-dropdown');
+        this.#bodyElement = this.#layoutElement.querySelector('.foxybdr-body');
+
+        this.#layoutElement.querySelector('.foxybdr-control-label').innerText = label;
+        this.#layoutElement.querySelector('.foxybdr-group-dropdown .foxybdr-title').innerText = label;
+
+        this.registerEvent(document.body, 'click');
+
+        let trashElement = this.#layoutElement.querySelector('.foxybdr-group-dropdown .dashicons-trash');
+        this.registerEvent(trashElement, 'click');
+    }
+
+    handleEvent(e)
+    {
+        if (e.type === 'click' && e.currentTarget.tagName.toLowerCase() === 'body')
+        {
+            FoxyControls.Function.onDropdownClickEvent(e, this.#groupButtonElement, this.#groupDropdownElement);
+        }
+        else if (e.type === 'click' && e.currentTarget.classList.contains('dashicons-trash'))
+        {
+            for (let control of this.#controls)
+            {
+                control.setValue(null);
+
+                this.sendEvent({
+                    type: 'control-change',
+                    name: control.name,
+                    value: control.value
+                });
+            }
+
+            this.#updateGroupButton();
+        }
+        else if (e.type === 'control-change')
+        {
+            this.#updateGroupButton();
+        }
+    }
+
+    addControl(control)
+    {
+        control.addEventListener(this);
+
+        this.#controls.push(control);
+
+        this.#updateGroupButton();
+    }
+
+    getParentElementForNewControl()
+    {
+        return this.#bodyElement;
+    }
+
+    #updateGroupButton()
+    {
+        let isDefault = true;
+
+        for (let control of this.#controls)
+        {
+            if (control.value !== null)
+            {
+                isDefault = false;
+                break;
+            }
+        }
+
+        if (!isDefault)
+            this.#groupButtonElement.classList.add('foxybdr-enabled');
+        else
+            this.#groupButtonElement.classList.remove('foxybdr-enabled');
+    }
+
+    destroy()
+    {
+        super.destroy();
+
+        if (this.#layoutElement !== null)
+        {
+            this.#layoutElement.remove();
+            this.#layoutElement = null;
+        }
+
+        this.#groupButtonElement = null;
+        this.#groupDropdownElement = null;
+        this.#bodyElement = null;
+
+        /* There is no need to destroy the controls here because they are owned by the SettingsModule_Tab_Section class, which is
+         * responsible for destroying them. Here we will just release their references. */
+        this.#controls = [];
     }
 };
 
@@ -1729,12 +2154,24 @@ FoxyApp.Class.UI.ElementDragDrop = class extends FoxyApp.Class.UI.Component.Base
 
     #onDragStart(e)
     {
+        if (e.target.draggable === false)
+            return;
 
+        for (let sourceType of this.#sourceTypes)
+        {
+            if (e.target.matches(sourceType.sourceSelector))
+            {
+                e.dataTransfer.setData("text/plain", '');
+                e.dataTransfer.effectAllowed = "move";
+                FoxyApp.Class.UI.ElementDragDrop.setSourceElement(e.target);
+                break;
+            }
+        }
     }
 
     #onDragEnd(e)
     {
-
+        FoxyApp.Class.UI.ElementDragDrop.setSourceElement(null);
     }
 
     #scrollIfNeeded(e)
@@ -2737,9 +3174,9 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
                 {
                     let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetID];
                     let settingParams = widget.settings[settingName];
-                    let cssChanged = settingParams.selector !== undefined || settingParams.selectors !== undefined;
+                    let cssChanged = settingParams.selector !== undefined || settingParams.selectors !== undefined || settingParams.render_type === 'ui';
 
-                    if (!cssChanged)
+                    if (cssChanged === false)
                     {
                         let canvasNodes = this.#canvasNodeMap[wInstanceID];
 
@@ -2749,7 +3186,8 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
                                 canvasNode.render(false);
                         }
                     }
-                    else
+
+                    if (cssChanged === true || widget.cssDependencies[settingName] === true)
                     {
                         this.#stylesheet.update(wInstanceID);
                     }
@@ -2806,9 +3244,9 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
                 let widgetInstance = FoxyApp.Model.widgetInstanceMap[wInstanceID];
                 let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetID];
                 let settingParams = widget.settings[settingName];
-                let cssChanged = settingParams.selector !== undefined || settingParams.selectors !== undefined;
+                let cssChanged = settingParams.selector !== undefined || settingParams.selectors !== undefined || settingParams.render_type === 'ui';
 
-                if (cssChanged)
+                if (cssChanged === true || widget.cssDependencies[settingName] === true)
                 {
                     this.#stylesheet.update(wInstanceID);
                 }
@@ -3154,6 +3592,7 @@ FoxyApp.Class.View.Canvas_Stylesheet = class extends FoxyApp.Class.UI.Component.
     #headElement = null;
 
     #stylesheet = {};
+    #loadingImages = {};
 
     constructor()
     {
@@ -3265,6 +3704,40 @@ FoxyApp.Class.View.Canvas_Stylesheet = class extends FoxyApp.Class.UI.Component.
 
                 if (styleElement)
                     styleElement.textContent = this.#stylesheet[wInstanceID];
+
+                for (let id of e.response.imageUrlFaults)
+                {
+                    let idStr = String(id);
+
+                    if (this.#loadingImages[idStr] === undefined)
+                        this.#loadingImages[idStr] = {};
+
+                    this.#loadingImages[idStr][wInstanceID] = true;
+
+                    FoxyApp.imageUrlLoader.requestImageUrls(this, id);
+                }
+            }
+        }
+        else if (e.type === 'image-url-loaded')
+        {
+            let wInstanceIDs = [];
+
+            for (let id of e.ids)
+            {
+                let idStr = String(id);
+
+                if (this.#loadingImages[idStr] !== undefined)
+                {
+                    for (let wInstanceID in this.#loadingImages[idStr])
+                        wInstanceIDs.push(wInstanceID);
+
+                    delete this.#loadingImages[idStr];
+                }
+            }
+
+            for (let wInstanceID of wInstanceIDs)
+            {
+                FoxyApp.backgroundThread.submitRequest_buildStylesheet(this, wInstanceID);
             }
         }
     }
@@ -3523,11 +3996,17 @@ FoxyApp.Class.BackgroundThread = class extends FoxyApp.Class.UI.Component.BaseCo
 
     submitRequest_widgetInstances(widgetInstances)
     {
-        for (let request of this.#requestQueue)
+        for (let i = 0; i < this.#requestQueue.length; i++)
         {
+            let request = this.#requestQueue[i];
+
             if (request.request.type === 'widget-instances')
             {
                 request.request.widgetInstances = widgetInstances;
+
+                this.#requestQueue.splice(i, 1);
+                this.#submitRequest(request);
+
                 return;
             }
         }
@@ -3544,13 +4023,19 @@ FoxyApp.Class.BackgroundThread = class extends FoxyApp.Class.UI.Component.BaseCo
 
     submitRequest_updateWidgetInstance(wInstanceID, settingName, settingValue)
     {
-        for (let request of this.#requestQueue)
+        for (let i = 0; i < this.#requestQueue.length; i++)
         {
+            let request = this.#requestQueue[i];
+
             if (request.request.type === 'update-widget-instance' &&
                 request.request.wInstanceID === wInstanceID &&
                 request.request.settingName === settingName)
             {
                 request.request.settingValue = settingValue;
+
+                this.#requestQueue.splice(i, 1);
+                this.#submitRequest(request);
+
                 return;
             }
         }
@@ -3569,8 +4054,10 @@ FoxyApp.Class.BackgroundThread = class extends FoxyApp.Class.UI.Component.BaseCo
 
     submitRequest_render(requester, wInstanceID, context, deep)
     {
-        for (let request of this.#requestQueue)
+        for (let i = 0; i < this.#requestQueue.length; i++)
         {
+            let request = this.#requestQueue[i];
+
             if (request.request.type === 'render' && request.requester === requester)
             {
                 request.request.context = context;
@@ -3580,6 +4067,9 @@ FoxyApp.Class.BackgroundThread = class extends FoxyApp.Class.UI.Component.BaseCo
                     request.returnParams.deep = true;
                 }
     
+                this.#requestQueue.splice(i, 1);
+                this.#submitRequest(request);
+
                 return;
             }
         }
@@ -3599,11 +4089,16 @@ FoxyApp.Class.BackgroundThread = class extends FoxyApp.Class.UI.Component.BaseCo
 
     submitRequest_buildStylesheet(requester, wInstanceID)
     {
-        for (let request of this.#requestQueue)
+        for (let i = 0; i < this.#requestQueue.length; i++)
         {
+            let request = this.#requestQueue[i];
+
             if (request.request.type === 'build-stylesheet' &&
                 request.request.wInstanceID === wInstanceID)
             {
+                this.#requestQueue.splice(i, 1);
+                this.#submitRequest(request);
+                
                 return;
             }
         }
@@ -3635,10 +4130,17 @@ FoxyApp.Class.BackgroundThread = class extends FoxyApp.Class.UI.Component.BaseCo
 
     submitRequest_findGoogleFonts(requester)
     {
-        for (let request of this.#requestQueue)
+        for (let i = 0; i < this.#requestQueue.length; i++)
         {
+            let request = this.#requestQueue[i];
+
             if (request.request.type === 'find-google-fonts' && request.requester === requester)
+            {
+                this.#requestQueue.splice(i, 1);
+                this.#submitRequest(request);
+
                 return;
+            }
         }
 
         this.#submitRequest({
@@ -3653,10 +4155,17 @@ FoxyApp.Class.BackgroundThread = class extends FoxyApp.Class.UI.Component.BaseCo
 
     submitRequest_findGlobalDependencies(requester, settingName)
     {
-        for (let request of this.#requestQueue)
+        for (let i = 0; i < this.#requestQueue.length; i++)
         {
+            let request = this.#requestQueue[i];
+
             if (request.request.type === 'find-global-dependencies' && request.requester === requester && request.request.settingName === settingName)
+            {
+                this.#requestQueue.splice(i, 1);
+                this.#submitRequest(request);
+
                 return;
+            }
         }
 
         this.#submitRequest({
@@ -3784,22 +4293,33 @@ FoxyApp.Class.ImageUrlLoader = class
 
     onBatchResponse(images)
     {
+        let ids = [];
+        let requesters = [];
+
         for (let idStr in images)
         {
+            ids.push(Number(idStr));
+
             FoxyApp.backgroundThread.submitRequest_cacheImageUrls(Number(idStr), images[idStr]);
 
             if (this.#imageIds[idStr] !== undefined)
             {
                 for (let requester of this.#imageIds[idStr])
                 {
-                    requester.handleEvent({
-                        type: 'image-url-loaded',
-                        id: Number(idStr)
-                    });
+                    if (requesters.includes(requester) === false)
+                        requesters.push(requester);
                 }
 
                 delete this.#imageIds[idStr];
             }
+        }
+
+        for (let requester of requesters)
+        {
+            requester.handleEvent({
+                type: 'image-url-loaded',
+                ids: ids
+            });
         }
 
         this.#isProcessing = false;
@@ -4100,6 +4620,141 @@ FoxyApp.Class.GoogleFontLoader = class
 
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// WIDGET CSS DEPENDENCY BUILDER
+//
+// Purpose: When a setting value changes, we need to know whether or not the stylesheet for the widget instance needs to be rebuilt, which
+// is CPU expensive. This class builds a dictionary object that maps (1) setting name, to (2) flag indicating whether or not the stylesheet
+// needs to be rebuilt whenever that setting changes. This flag takes into account whether the setting is being referenced by:
+// (a) Conditions in other settings.
+// (b) Variables in the 'selector' parameters of other settings.
+// If the setting is being referenced by other settings, a CSS stylesheet rebuild of the widget instance may be necessary.
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+FoxyApp.Class.WidgetCssDependencyBuilder = class
+{
+    #widget = null;
+    #dependencies = {};
+    #varRegex = /{{([^}]*)}}/g;
+
+    constructor(widget)
+    {
+        this.#widget = widget;
+    }
+
+    build()
+    {
+        for (let tab of this.#widget.tabs)
+        {
+            for (let section of tab.sections)
+            {
+                if (section.condition === undefined)
+                    continue;
+
+                for (let key in section.condition)
+                {
+                    let not = key.endsWith('!');
+                    let varName = not ? key.substring(0, key.length - 1) : key;
+                    let parts = varName.split('.');
+                    let settingName = parts[0];
+            
+                    if (this.#widget.settings[settingName] === undefined)
+                        continue;
+        
+                    this.#dependencies[settingName] = true;
+        
+                    this.#processSettingCondition(settingName);
+                }
+            }
+        }
+
+        for (let settingName in this.#widget.settings)
+        {
+            this.#processSettingCondition(settingName);
+        }
+
+        for (let settingName in this.#widget.settings)
+        {
+            let settingParams = this.#widget.settings[settingName];
+
+            if (settingParams.selectors === undefined)
+                continue;
+
+            for (let selector in settingParams.selectors)
+            {
+                let selectorValue = settingParams.selectors[selector];
+
+                let match;
+
+                while ((match = this.#varRegex.exec(selectorValue)) !== null)
+                {
+                    let varName = match[1];
+
+                    let varNames = [];
+                    if (varName.startsWith('|'))
+                    {
+                        let items = varName.split('|');
+                        items.shift();  // remove empty string
+                        items.shift();  // remove function name
+
+                        for (let item of items)
+                            varNames.push(item);
+                    }
+                    else
+                        varNames.push(varName);
+
+                    for (let v of varNames)
+                    {
+                        let parts = v.split('.');
+
+                        if (parts.length < 2)
+                            continue;
+
+                        let _settingName = parts[0];
+
+                        if (this.#widget.settings[_settingName] === undefined)
+                            continue;
+                
+                        this.#dependencies[_settingName] = true;
+
+                        this.#processSettingCondition(_settingName);
+                    }
+                }
+            }
+        }
+    }
+
+    getDependencies()
+    {
+        return this.#dependencies;
+    }
+
+    #processSettingCondition(settingName)
+    {
+        let settingParams = this.#widget.settings[settingName];
+
+        if (settingParams.condition === undefined)
+            return;
+
+        for (let key in settingParams.condition)
+        {
+            let not = key.endsWith('!');
+            let varName = not ? key.substring(0, key.length - 1) : key;
+            let parts = varName.split('.');
+            let _settingName = parts[0];
+    
+            if (this.#widget.settings[_settingName] === undefined)
+                continue;
+
+            this.#dependencies[_settingName] = true;
+
+            this.#processSettingCondition(_settingName);
+        }
+    }
+};
+
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // "GLOBAL" OBJECTS AND VARIABLES
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -4179,6 +4834,7 @@ FoxyApp.Main = class
 
         FoxyApp.Model.widgetCategories = FOXYAPP.widgetCategories;
         FoxyApp.Model.widgets = FOXYAPP.widgets;
+        this.#buildWidgetCssDependencies();
 
         FoxyApp.Model.Settings.siteSettings = new FoxyApp.Class.Model.WidgetInstance({
             id: 'S-siteSettings',
@@ -4208,6 +4864,20 @@ FoxyApp.Main = class
         FoxyApp.View.device.create();
 
         this.scheduleRefreshNonce();
+    }
+
+    #buildWidgetCssDependencies()
+    {
+        for (let widgetID in FoxyApp.Model.widgets)
+        {
+            let widget = FoxyApp.Model.widgets[widgetID];
+
+            let depBuilder = new FoxyApp.Class.WidgetCssDependencyBuilder(widget);
+
+            depBuilder.build();
+
+            widget.cssDependencies = depBuilder.getDependencies();
+        }        
     }
 
     scheduleRefreshNonce(milliseconds = 3600 * 1000)

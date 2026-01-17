@@ -112,6 +112,54 @@ FoxyApp.Function.evaluateGlobal = function(value, type)
     return widget.settings[settingName].default;
 }
 
+FoxyApp.Function.evaluateCondition = function(condition, sparseSettings, wSettings, disabledSettingNames)
+{
+    let result = true;
+
+    for (let key in condition)
+    {
+        let not = key.endsWith('!');
+        let varName = not ? key.substring(0, key.length - 1) : key;
+        let parts = varName.split('.');
+        let settingName = parts[0];
+        let fieldName = parts.length >= 2 ? parts[1].toLowerCase() : null;
+
+        if (disabledSettingNames !== undefined && disabledSettingNames.includes(settingName))
+            return false;
+
+        if (wSettings[settingName].condition !== undefined)
+        {
+            if (FoxyApp.Function.evaluateCondition(wSettings[settingName].condition, sparseSettings, wSettings, disabledSettingNames) === false)
+                return false;
+        }
+
+        let compareValue = condition[key];
+        let value = FoxyApp.Function.evaluateValue(sparseSettings[settingName], wSettings[settingName]).desktop;
+        if (fieldName !== null)
+        {
+            value = fieldName === 'value' && value[fieldName] === undefined ? value : value[fieldName];
+        }
+
+        let termResult;
+
+        if (typeof compareValue === 'string')
+        {
+            termResult = compareValue === String(value);
+        }
+        else if (compareValue instanceof Array)
+        {
+            termResult = compareValue.includes(String(value));
+        }
+
+        if (not)
+            termResult = !termResult;
+
+        result = result && termResult;
+    }
+
+    return result;
+}
+
 FoxyApp.Function.isValueEqual = function(firstObject, secondObject)
 {
     if (firstObject === null && secondObject !== null || firstObject !== null && secondObject === null)
@@ -230,6 +278,20 @@ FoxyApp.Class.Renderer = class
 
                 case 'REPEATER':
                     {
+                        let repeaterArr = sparseSettings[settingName];
+                        if (repeaterArr === undefined)
+                            repeaterArr = settingParams.default;
+                        if (repeaterArr === undefined)
+                            repeaterArr = FoxyApp.Model.controlDefaultValues[settingParams.type];
+
+                        let result = [];
+                        for (let item of repeaterArr)
+                        {
+                            let eItem = this.#evaluateSettings(item, settingParams.fields.settings);
+                            result.push(eItem);
+                        }
+
+                        eSettings[settingName] = result;
                     }
                     break;
 
@@ -270,14 +332,15 @@ FoxyApp.Class.StylesheetGenerator = class
         this.#stylesheet = { desktop: {}, tablet: {}, mobile: {} };
 
         let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetID];
-        let wSettings = this.#applyConditions(widgetInstance.data.sparseSettings, widget);
+
+        let disabledSettingNames = this.#applySectionConditions(widgetInstance.data.sparseSettings, widget);
 
         let selectorVariables = {
             'WIDGET': `.foxybdr-widget[foxybdr-instance-id="${wInstanceID}"]`,
             'WRAPPER': `.foxybdr-widget[foxybdr-instance-id="${wInstanceID}"] > .foxybdr-widget-container`
         };
 
-        this.#evaluateSettings(widgetInstance.data.sparseSettings, wSettings, selectorVariables);
+        this.#evaluateSettings(widgetInstance.data.sparseSettings, widget.settings, selectorVariables, disabledSettingNames);
 
         let stylesheetStr = this.#buildStylesheetStr();
 
@@ -286,11 +349,20 @@ FoxyApp.Class.StylesheetGenerator = class
         return stylesheetStr;
     }
 
-    #evaluateSettings(sparseSettings, wSettings, selectorVariables)
+    #evaluateSettings(sparseSettings, wSettings, selectorVariables, disabledSettingNames)
     {
         for (let settingName in wSettings)
         {
             let settingParams = wSettings[settingName];
+
+            if (disabledSettingNames !== undefined && disabledSettingNames.includes(settingName))
+                continue;
+
+            if (settingParams.condition !== undefined)
+            {
+                if (FoxyApp.Function.evaluateCondition(settingParams.condition, sparseSettings, wSettings, disabledSettingNames) === false)
+                    continue;
+            }
 
             switch (settingParams.type)
             {
@@ -322,6 +394,16 @@ FoxyApp.Class.StylesheetGenerator = class
 
                 case 'REPEATER':
                     {
+                        let repeaterArr = sparseSettings[settingName];
+                        if (repeaterArr === undefined)
+                            repeaterArr = settingParams.default;
+                        if (repeaterArr === undefined)
+                            repeaterArr = FoxyApp.Model.controlDefaultValues[settingParams.type];
+
+                        for (let item of repeaterArr)
+                        {
+                            this.#evaluateSettings(item, settingParams.fields.settings, selectorVariables);
+                        }
                     }
                     break;
 
@@ -357,7 +439,7 @@ FoxyApp.Class.StylesheetGenerator = class
                             let variables = {};
                             let match;
                             while ((match = this.#varRegex.exec(selectorValue)) !== null)
-                                variables[match[1]] = this.#getVariableValue(match[1], currentResponsiveValue, sparseSettings, wSettings);
+                                variables[match[1]] = this.#getVariableValue(match[1], currentResponsiveValue, sparseSettings, wSettings, disabledSettingNames);
 
                             selectorData.push({
                                 selector: eSelector,
@@ -412,8 +494,13 @@ FoxyApp.Class.StylesheetGenerator = class
         }
     }
 
-    #getVariableValue(varName, currentResponsiveValue, sparseSettings, wSettings)
+    #getVariableValue(varName, currentResponsiveValue, sparseSettings, wSettings, disabledSettingNames)
     {
+        if (varName.startsWith('|'))
+        {
+            return this.#executeVariableFunction(varName, currentResponsiveValue, sparseSettings, wSettings, disabledSettingNames);
+        }
+
         let responsiveValue;
         let fieldName;
 
@@ -433,6 +520,15 @@ FoxyApp.Class.StylesheetGenerator = class
             if (wSettings[settingName] === undefined)
                 return {};
 
+            if (disabledSettingNames !== undefined && disabledSettingNames.includes(settingName))
+                return {};
+
+            if (wSettings[settingName].condition !== undefined)
+            {
+                if (FoxyApp.Function.evaluateCondition(wSettings[settingName].condition, sparseSettings, wSettings, disabledSettingNames) === false)
+                    return {};
+            }
+
             responsiveValue = FoxyApp.Function.evaluateValue(sparseSettings[settingName], wSettings[settingName]);
         }
 
@@ -449,6 +545,58 @@ FoxyApp.Class.StylesheetGenerator = class
         return newValue;
     }
 
+    #executeVariableFunction(functionCallStr, currentResponsiveValue, sparseSettings, wSettings, disabledSettingNames)
+    {
+        let items = functionCallStr.split('|');
+
+        items.shift();
+
+        let functionName = items.shift();
+
+        let varValues = [];
+
+        for (let varName of items)
+        {
+            let value = this.#getVariableValue(varName, currentResponsiveValue, sparseSettings, wSettings, disabledSettingNames);
+
+            varValues.push(value);
+        }
+
+        let newValue = {};
+
+        for (let device of [ 'desktop', 'tablet', 'mobile' ])
+        {
+            let v = [];
+
+            for (let varValue of varValues)
+            {
+                if (varValue[device] === undefined)
+                    continue;
+
+                v.push(varValue[device]);
+            }
+
+            if (v.length !== varValues.length)
+                continue;
+
+            switch (functionName)
+            {
+                case 'image-url':
+                    {
+                        if (v.length === 3)
+                        {
+                            let url = FoxyApp.Function.getImageUrl(Number(v[0]), String(v[1]), String(v[2]));
+
+                            newValue[device] = url.replaceAll('"', '%22');
+                        }
+                    }
+                    break;
+            }
+        }
+
+        return newValue;
+    }
+
     #buildCssPropertiesFromString(str)
     {
         let result = {};
@@ -457,13 +605,13 @@ FoxyApp.Class.StylesheetGenerator = class
 
         for (let segment of segments)
         {
-            let parts = segment.split(':');
+            let colonIndex = segment.indexOf(':');
 
-            if (parts.length < 2)
+            if (colonIndex < 0)
                 continue;
 
-            let cssProperty = parts[0].trim();
-            let cssValue = parts[1].trim();
+            let cssProperty = segment.substring(0, colonIndex).trim();
+            let cssValue = segment.substring(colonIndex + 1).trim();
 
             result[cssProperty] = cssValue;
         }
@@ -471,13 +619,31 @@ FoxyApp.Class.StylesheetGenerator = class
         return result;
     }
 
-    #applyConditions(sparseSettings, widget)
+    #applySectionConditions(sparseSettings, widget)
     {
-        let result = {};
+        let disabledSettingNames = [];
 
-        // TODO: Return a cloned copy of widget.settings with settings removed according to the condition rules in the widget.
+        for (let tab of widget.tabs)
+        {
+            for (let section of tab.sections)
+            {
+                if (section.condition === undefined)
+                    continue;
 
-        return widget.settings;
+                if (FoxyApp.Function.evaluateCondition(section.condition, sparseSettings, widget.settings) === true)
+                    continue;
+
+                for (let item of section.settings)
+                {
+                    if (item.type === 'setting')
+                    {
+                        disabledSettingNames.push(item.name);
+                    }
+                }
+            }
+        }
+
+        return disabledSettingNames;
     }
 
     #buildStylesheetStr()
@@ -627,6 +793,16 @@ FoxyApp.Class.AssetFinder = class
 
                 case 'REPEATER':
                     {
+                        let repeaterArr = sparseSettings[settingName];
+                        if (repeaterArr === undefined)
+                            repeaterArr = settingParams.default;
+                        if (repeaterArr === undefined)
+                            repeaterArr = FoxyApp.Model.controlDefaultValues[settingParams.type];
+
+                        for (let item of repeaterArr)
+                        {
+                            this.#evaluateSettings(item, settingParams.fields.settings);
+                        }
                     }
                     break;
 
@@ -752,6 +928,17 @@ FoxyApp.Class.GlobalDependencyFinder = class
 
                 case 'REPEATER':
                     {
+                        let repeaterArr = sparseSettings[settingName];
+                        if (repeaterArr === undefined)
+                            repeaterArr = settingParams.default;
+                        if (repeaterArr === undefined)
+                            repeaterArr = FoxyApp.Model.controlDefaultValues[settingParams.type];
+
+                        for (let item of repeaterArr)
+                        {
+                            if (this.#evaluateSettings(item, settingParams.fields.settings) === true)
+                                return true;
+                        }
                     }
                     break;
 
@@ -854,8 +1041,7 @@ FoxyApp.Main = class
                 break;
 
             case 'build-stylesheet':
-                let stylesheetStr = this.#buildStylesheet(request.wInstanceID);
-                return { stylesheetStr: stylesheetStr };
+                return this.#buildStylesheet(request.wInstanceID);
                 break;
 
             case 'cache-image-urls':
@@ -953,7 +1139,14 @@ FoxyApp.Main = class
 
     #buildStylesheet(wInstanceID)
     {
-        return FoxyApp.stylesheetGenerator.build(wInstanceID);
+        FoxyApp.Cache.Image.Url.faults = [];
+
+        let stylesheetStr = FoxyApp.stylesheetGenerator.build(wInstanceID);
+
+        return {
+            stylesheetStr: stylesheetStr,
+            imageUrlFaults: FoxyApp.Cache.Image.Url.faults
+        };
     }
 
     #cacheImageUrls(id, imageUrls)

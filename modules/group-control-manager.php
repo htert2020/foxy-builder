@@ -24,10 +24,18 @@ class GroupControlManager
     public function add_group_controls()
     {
         require_once FOXYBUILDER_PLUGIN_PATH . '/modules/group-controls/typography.php';
+        require_once FOXYBUILDER_PLUGIN_PATH . '/modules/group-controls/border.php';
+        require_once FOXYBUILDER_PLUGIN_PATH . '/modules/group-controls/box-shadow.php';
+        require_once FOXYBUILDER_PLUGIN_PATH . '/modules/group-controls/text-shadow.php';
+        require_once FOXYBUILDER_PLUGIN_PATH . '/modules/group-controls/color-filter.php';
         require_once FOXYBUILDER_PLUGIN_PATH . '/modules/group-controls/image-size.php';
 
         $this->group_controls = [
             new \FoxyBuilder\Modules\GroupControls\Typography(),
+            new \FoxyBuilder\Modules\GroupControls\Border(),
+            new \FoxyBuilder\Modules\GroupControls\BoxShadow(),
+            new \FoxyBuilder\Modules\GroupControls\TextShadow(),
+            new \FoxyBuilder\Modules\GroupControls\ColorFilter(),
             new \FoxyBuilder\Modules\GroupControls\ImageSize(),
         ];
     }
