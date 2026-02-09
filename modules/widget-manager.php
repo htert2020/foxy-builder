@@ -25,6 +25,37 @@ class WidgetManager
         return self::$_instance;
     }
 
+    public function add_categories()
+    {
+        $this->add_category('layout', 'Layout');
+        $this->add_category('basic', 'Basic');
+    }
+
+    public function add_widgets()
+    {
+        require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/settings/site.php';
+        require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/layout/section.php';
+        require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/layout/column.php';
+        require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/layout/block.php';
+        require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/basic/heading.php';
+        require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/basic/text.php';
+        require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/basic/image.php';
+        require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/basic/icon.php';
+        require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/basic/button.php';
+
+        $this->widgets = [
+            new \FoxyBuilder\Modules\Widgets\Settings\Site(),
+            new \FoxyBuilder\Modules\Widgets\Layout\Section(),
+            new \FoxyBuilder\Modules\Widgets\Layout\Column(),
+            new \FoxyBuilder\Modules\Widgets\Layout\Block(),
+            new \FoxyBuilder\Modules\Widgets\Basic\Heading(),
+            new \FoxyBuilder\Modules\Widgets\Basic\Text(),
+            new \FoxyBuilder\Modules\Widgets\Basic\Image(),
+            new \FoxyBuilder\Modules\Widgets\Basic\Icon(),
+            new \FoxyBuilder\Modules\Widgets\Basic\Button(),
+        ];
+    }
+
     public function add_category($name, $title)
     {
         $this->categories[] = [
@@ -34,19 +65,6 @@ class WidgetManager
         ];
 
         $this->category_index[$name] = count($this->categories) - 1;
-    }
-
-    public function add_widgets()
-    {
-        require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/settings/site.php';
-        require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/layout/section.php';
-        require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/layout/column.php';
-
-        $this->widgets = [
-            new \FoxyBuilder\Modules\Widgets\Settings\Site(),
-            new \FoxyBuilder\Modules\Widgets\Layout\Section(),
-            new \FoxyBuilder\Modules\Widgets\Layout\Column(),
-        ];
     }
 
     public function add_widget($widgetObj)

@@ -207,7 +207,7 @@ FoxyControls.load = function()
 
             this.name = name;
             this.setting = setting;
-            this.value = value;
+            this.value = structuredClone(value);
 
             this.deviceMode = FoxyApp.Model.device.deviceMode;
         }
@@ -345,6 +345,8 @@ FoxyControls.load = function()
 
         setDisplayValue(newValue)
         {
+            let oldValue = this.value !== null ? structuredClone(this.value) : null;
+
             let controlDefaultValue = FoxyControls.controlDefaultValues[this.setting.type];
             let settingDefaultValue = this.setting.default !== undefined ? this.setting.default : controlDefaultValue;
 
@@ -377,11 +379,14 @@ FoxyControls.load = function()
                 this.value = FoxyApp.Function.isValueEqual(newValue, settingDefaultValue) ? null : newValue;
             }
 
-            this.sendEvent({
-                type: 'control-change',
-                name: this.name,
-                value: this.value
-            });
+            if (FoxyApp.Function.isValueEqual(oldValue, this.value) === false)
+            {
+                this.sendEvent({
+                    type: 'control-change',
+                    name: this.name,
+                    value: structuredClone(this.value)
+                });
+            }
         }
 
         onDisplayValueChanged(displayValue, placeholderValue) {}  // overridable
@@ -562,6 +567,8 @@ FoxyControls.load = function()
         #textAreaInputElement = null;
         #editor = null;
 
+        contentChangedTimeoutHandle = null;
+
         constructor(name, setting, value)
         {
             super(name, setting, value);
@@ -612,12 +619,22 @@ FoxyControls.load = function()
                 _this.#editor.on('input cut FormatApply FormatRemove Undo Redo Change InsertCustomChar keyup',
                     function()
                     {
-                        setTimeout(function() {
+                        if (_this.contentChangedTimeoutHandle !== null)
+                            clearTimeout(_this.contentChangedTimeoutHandle);
+
+                        _this.contentChangedTimeoutHandle = setTimeout(function() {
+                            _this.contentChangedTimeoutHandle = null;
                             _this.onContentChanged();
                         }, 1);
                     }
                 );
 
+                // Disable undo/redo as triggered by Ctrl+Z and Ctrl+Y.
+                _this.#editor.on('BeforeAddUndo',
+                    function(e) {
+                        return false;
+                    }
+                );
             });
         }
 
@@ -1139,8 +1156,11 @@ FoxyControls.load = function()
 
             let numValue = this.#numberInputElement.value;
 
-            if (numValue !== '' && this.#unitSelectElement.selectedIndex !== -1)
+            if (this.#unitSelectElement.selectedIndex !== -1)
             {
+                if (numValue === '')
+                    numValue = '0';
+
                 let min = this.setting.range[this.#unitSelectElement.value].min;
                 let max = this.setting.range[this.#unitSelectElement.value].max;
                 posPercent = (Number(numValue) - min) / (max - min) * 100.0;
@@ -3478,6 +3498,31 @@ FoxyControls.load = function()
             }
         }
 
+        onDisplayValueChanged(displayValue, placeholderValue)
+        {
+            this.#groupValue = structuredClone(displayValue);
+
+            if (this.#groupControlDef.isDropdown)
+            {
+                if (Object.keys(this.#groupValue).length > 0)
+                    this.#groupButtonElement.classList.add('foxybdr-enabled');
+                else
+                    this.#groupButtonElement.classList.remove('foxybdr-enabled');
+            }
+
+            for (let control of this.#controls)
+            {
+                let settingName = control.name;
+
+                if (this.#groupValue[settingName] !== undefined)
+                    control.setValue(this.#groupValue[settingName]);
+                else
+                    control.setValue(null);
+            }
+
+            this.#disableConditionalSettings();
+        }
+
         destroy()
         {
             super.destroy();
@@ -3770,6 +3815,25 @@ FoxyControls.load = function()
                 this.#repeaterElement.classList.add('foxybdr-delete-disabled');
             else
                 this.#repeaterElement.classList.remove('foxybdr-delete-disabled');
+        }
+
+        onDisplayValueChanged(displayValue, placeholderValue)
+        {
+            this.#repeaterValue = structuredClone(displayValue);
+
+            for (let i = 0; i < this.#itemContainerElement.children.length; i++)
+                this.#destroyItemElement(this.#itemContainerElement.children[i]);
+
+            this.#itemContainerElement.innerHTML = '';
+
+            for (let item of this.#repeaterValue)
+            {
+                let itemElement = this.#createItemElement(item);
+
+                this.#itemContainerElement.appendChild(itemElement);
+            }
+
+            this.#updateDeleteDisabled();
         }
 
         destroy()

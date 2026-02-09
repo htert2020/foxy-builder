@@ -78,5 +78,19 @@ class Border extends \FoxyBuilder\Modules\GroupControls\BaseGroupControl
                 ],
             ]
         );
+
+        $this->add_control(
+            'color-hover',
+            [
+                'label' => __('Border Color - Hover', 'foxy-builder'),
+                'type' => ControlType::$COLOR,
+                'selectors' => [
+                    '{{SELECTOR_HOVER}}' => 'border-color: {{VALUE}}',
+                ],
+                'condition' => [
+                    'style!' => [ '', 'none' ],
+                ],
+            ]
+        );
     }
 }

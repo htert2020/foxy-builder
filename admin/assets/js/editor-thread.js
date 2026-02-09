@@ -375,9 +375,15 @@ FoxyApp.Class.StylesheetGenerator = class
                         for (let v in selectorVariables)
                             eSelector = eSelector.replaceAll(`{{${v}}}`, selectorVariables[v]);
 
+                        let items = [];
+                        for (let item of eSelector.split(','))
+                            items.push(item.trim() + ':hover');
+                        let eHoverSelector = items.join(', ');
+
                         let newSelectorVariables = {
                             ...selectorVariables,
-                            'SELECTOR': eSelector
+                            'SELECTOR': eSelector,
+                            'SELECTOR_HOVER': eHoverSelector
                         };
 
                         let newSparseSettings = sparseSettings[settingName];
@@ -1010,6 +1016,8 @@ FoxyApp.Model.widgetInstances = {};
 FoxyApp.renderer = null;
 FoxyApp.stylesheetGenerator = null;
 
+FoxyApp.pluginUrl = '';
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MAIN CLASS
@@ -1023,7 +1031,7 @@ FoxyApp.Main = class
         switch (request.type)
         {
             case 'init':
-                this.#init(request.controlDefaultValues, request.groupControls, request.widgets);
+                this.#init(request.pluginUrl, request.controlDefaultValues, request.groupControls, request.widgets);
                 break;
 
             case 'widget-instances':
@@ -1061,8 +1069,10 @@ FoxyApp.Main = class
         }
     }
 
-    #init(controlDefaultValues, groupControls, widgets)
+    #init(pluginUrl, controlDefaultValues, groupControls, widgets)
     {
+        FoxyApp.pluginUrl = pluginUrl;
+
         FoxyApp.Model.controlDefaultValues = controlDefaultValues;
         FoxyApp.Model.groupControls = groupControls;
         FoxyApp.Model.widgets = widgets;
@@ -1122,7 +1132,7 @@ FoxyApp.Main = class
                     FoxyApp.Cache.Image.Url.faults = [];
 
                     let renderFunction = FoxyRender.renderFunctions[widgetID];
-                    let renderHTML = renderFunction(wInstanceID, eSettings);
+                    let renderHTML = renderFunction !== undefined ? renderFunction(wInstanceID, eSettings) : '';
 
                     return {
                         renderHTML: renderHTML,

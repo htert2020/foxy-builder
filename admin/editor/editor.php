@@ -10,6 +10,7 @@ require_once FOXYBUILDER_PLUGIN_PATH . '/modules/document.php';
 require_once FOXYBUILDER_PLUGIN_PATH . '/modules/group-control-manager.php';
 require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widget-manager.php';
 require_once FOXYBUILDER_PLUGIN_PATH . '/modules/asset-manager.php';
+require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widget-instance-sanitizer.php';
 
 class Editor
 {
@@ -53,6 +54,7 @@ class Editor
         add_action('wp_ajax_foxybdr_editor_get_wysiwyg_links', [ $this, 'get_wysiwyg_links' ]);
         add_action('wp_ajax_foxybdr_editor_get_image_urls', [ $this, 'get_image_urls' ]);
         add_action('wp_ajax_foxybdr_editor_refresh_nonce', [ $this, 'refresh_nonce' ]);
+        add_action('wp_ajax_foxybdr_editor_save', [ $this, 'save' ]);
     }
 
     public function action_foxy_builder()
@@ -70,6 +72,7 @@ class Editor
         if ($document->edit_mode() === false)
         {
             $document->edit_mode(true);
+            $document->widget_instances('[]');
             $document->save();
         }
 
@@ -111,10 +114,11 @@ class Editor
         $this->group_controls = $group_control_manager->build_group_control_definitions();
     
         $widget_manager = \FoxyBuilder\Modules\WidgetManager::instance();
-        $widget_manager->add_category('layout', 'Layout');
+        $widget_manager->add_categories();
         $widget_manager->add_widgets();
         $this->categories = $widget_manager->build_category_definitions();
         $this->widgets = $widget_manager->build_widget_definitions();
+
         $this->fonts = \FoxyBuilder\Modules\AssetManager::instance()->get_fonts();
         $this->icon_libraries = \FoxyBuilder\Modules\AssetManager::instance()->get_icon_libraries();
 
@@ -137,6 +141,14 @@ class Editor
                 'nonceError' => [
                     'title' => __('Error', 'foxy-builder'),
                     'message' => __('Failed communication with server. Please reload this page.', 'foxy-builder'),
+                    'okLabel' => __('OK', 'foxy-builder'),
+                ],
+                'saveWait' => [
+                    'message' => __('Saving changes...', 'foxy-builder'),
+                ],
+                'saveError' => [
+                    'title' => __('Error', 'foxy-builder'),
+                    'message' => __('There was an error while attempting to save.', 'foxy-builder'),
                     'okLabel' => __('OK', 'foxy-builder'),
                 ],
             ],
@@ -183,6 +195,9 @@ class Editor
 
         require FOXYBUILDER_PLUGIN_PATH . '/admin/assets/html/admin.php';
 
+        $optStr = get_option('foxybdr_site_settings');
+        $site_settings = json_decode($optStr, true);
+
         $optStr = get_option('foxybdr_upload_file_types');
         $uploadFileTypes = $optStr !== false ? explode('|', $optStr) : [];
 
@@ -195,6 +210,8 @@ class Editor
                 'pluginUrl' => FOXYBUILDER_PLUGIN_URL,
                 'templateID' => $post_id,
                 'widgetInstanceIdCounter' => $document->widget_instance_id_counter(),
+                'widgetInstances' => [],
+                'siteSettings' => $site_settings,
                 'groupControls' => $this->group_controls,
                 'widgetCategories' => $this->categories,
                 'widgets' => $this->widgets,
@@ -208,6 +225,10 @@ class Editor
             ]); ?>;
 
             <?php
+
+                $widget_instances_json = $document->widget_instances();
+                ?> FOXYAPP.widgetInstances = <?php echo $widget_instances_json; ?>; <?php
+
                 foreach ($this->icon_libraries as $id => $library)
                 {
                     $icon_list_json = \FoxyBuilder\Modules\AssetManager::instance()->get_icon_library_icons($id);
@@ -216,6 +237,7 @@ class Editor
                         FOXYAPP.assets.iconLibraries['<?php echo esc_html($id); ?>']['icons'] = <?php echo $icon_list_json; ?>;
                     <?php
                 }
+
             ?>
 
         </script>
@@ -427,6 +449,78 @@ return FoxyRender.Printer.getOutput();
         wp_send_json([
             'status' => 'OK',
             'nonce' => wp_create_nonce($this->nonceContext),
+        ], 200);
+    }
+
+    public function save()
+    {
+        if (wp_verify_nonce(sanitize_text_field(wp_unslash($_POST['nonce'])), $this->nonceContext) === false)
+        {
+            wp_send_json([
+                'status' => 'ERROR',
+            ], 403);
+            return;
+        }
+
+        $group_control_manager = \FoxyBuilder\Modules\GroupControlManager::instance();
+        $group_control_manager->add_group_controls();
+        $group_controls = $group_control_manager->build_group_control_definitions();
+    
+        $widget_manager = \FoxyBuilder\Modules\WidgetManager::instance();
+        $widget_manager->add_widgets();
+        $widgets = $widget_manager->build_widget_definitions();
+
+        $widget_instance_sanitizer = new \FoxyBuilder\Modules\WidgetInstanceSanitizer($group_controls, $widgets);
+        
+        $post_id = absint(\FoxyBuilder\Includes\Security::sanitize_request($_POST, 'template_id'));
+
+        if (isset($_POST['site_settings']))
+        {
+            $site_settings = json_decode(wp_unslash($_POST['site_settings']), true);
+
+            if ($site_settings !== null)
+            {
+                $site_settings = wp_kses_post_deep($site_settings);
+
+                $site_settings = $widget_instance_sanitizer->sanitize($site_settings);
+
+                $site_settings_str = $widget_instance_sanitizer->json_encode($site_settings);
+
+                update_option('foxybdr_site_settings', $site_settings_str);
+            }
+        }
+
+        if (isset($_POST['template']))
+        {
+            $widget_instances = json_decode(wp_unslash($_POST['template']), true);
+
+            if ($widget_instances !== null)
+            {
+                $widget_instances = wp_kses_post_deep($widget_instances);
+
+                $wArr = [];
+
+                foreach ($widget_instances as $w)
+                {
+                    $sw = $widget_instance_sanitizer->sanitize($w);
+                    
+                    if ($sw !== null)
+                        $wArr[] = $widget_instance_sanitizer->json_encode($sw);
+                }
+
+                $widget_instances = wp_slash('[' . implode(',', $wArr) . ']');
+
+                $document = \FoxyBuilder\Modules\Document::get_document($post_id);
+                if ($document !== null && $document->can_user_edit() === true && $document->edit_mode() === true)
+                {
+                    $document->widget_instances($widget_instances);
+                    $document->save();
+                }
+            }
+        }
+
+        wp_send_json([
+            'status' => 'OK',
         ], 200);
     }
 }

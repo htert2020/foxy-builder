@@ -14,6 +14,8 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
 {
     protected static $TAB_SITE_IDENTITY = 'site-identity';
 
+    protected static $TAB_LAYOUT = 'layout';
+
     protected static $TAB_COLORS = 'colors';
 
     protected static $TAB_FONTS = 'fonts';
@@ -55,6 +57,11 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
             [
                 'title' => __('Site Identity', 'foxy-builder'),
                 'name' => self::$TAB_SITE_IDENTITY,
+                'sections' => [],
+            ],
+            [
+                'title' => __('Layout', 'foxy-builder'),
+                'name' => self::$TAB_LAYOUT,
                 'sections' => [],
             ],
             [
@@ -131,6 +138,55 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
             ]
         );
         
+        $this->end_controls_section();
+
+
+        $this->start_controls_section(
+            'layout',
+            [
+                'label' => __('Layout', 'foxy-builder'),
+                'tab' => self::$TAB_LAYOUT,
+            ]
+        );
+        
+        $this->add_control(
+            'layout_boxed-content-width',
+            [
+                'label'   => __('Boxed Content Width', 'foxy-builder'),
+                'type'    => ControlType::$SLIDER,
+                'size_units' => [ 'px', '%' ],
+                'range' => [
+                    'px' => [
+                        'min' => 500,
+                        'max' => 2000,
+                    ],
+                    '%' => [
+                        'min' => 0,
+                        'max' => 100,
+                    ],
+                ],
+                'default' => [
+                    'unit' => 'px',
+                    'size' => 1140,
+                ],
+                'selectors' => [
+                    'body' => '--foxybdr-boxed-content-width: {{SIZE}}{{UNIT}}',
+                ],
+            ]
+        );
+
+        $this->add_control(
+            'layout_widget-spacing',
+            [
+                'label'   => __('Widget Spacing', 'foxy-builder'),
+                'type'    => ControlType::$NUMBER,
+                'default' => 0,
+                'selectors' => [
+                    'body' => '--foxybdr-widget-spacing: {{VALUE}}px',
+                ],
+            ]
+        );
+
         $this->end_controls_section();
 
 
@@ -314,6 +370,41 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
 
 
         $this->start_controls_section(
+            'defaultstyles_effects',
+            [
+                'label' => __('Effects', 'foxy-builder'),
+                'tab' => self::$TAB_DEFAULT_STYLES,
+            ]
+        );
+
+        $this->add_control(
+            'defaultstyles_effects_transition-duration',
+            [
+                'label' => __('Transition Duration', 'foxy-builder'),
+                'type' => ControlType::$SLIDER,
+                'description' => 'Transition Duration controls the speed at which animated transitions occur on certain effects such as mouse hover.',
+                'size_units' => [ 's' ],
+                'range' => [
+                    's' => [
+                        'min'  => 0.0,
+                        'max'  => 3.0,
+                        'step' => 0.1,
+                    ],
+                ],
+                'default' => [
+                    'unit' => 's',
+                    'size' => 0.2,
+                ],
+                'selectors' => [
+                    'body' => "--foxybdr-global-transition-duration: {{SIZE}}{{UNIT}}",
+                ],
+            ]
+        );
+
+        $this->end_controls_section();
+
+
+        $this->start_controls_section(
             'breakpoints',
             [
                 'label' => __('Breakpoints', 'foxy-builder'),
@@ -336,6 +427,18 @@ class Site extends \FoxyBuilder\Modules\Widgets\BaseWidget
                 'label'   => __('Mobile', 'foxy-builder'),
                 'type'    => ControlType::$NUMBER,
                 'default' => 767,
+            ]
+        );
+
+        $this->add_responsive_control(
+            'frontend-mobile',
+            [
+                'label'   => '',
+                'type'    => ControlType::$HIDDEN,
+                'selectors' => [
+                    '[foxybdr-widget-type="foxybdr.layout.section"] > .foxybdr-widget-container' => 'flex-wrap: wrap;',
+                    '.foxybdr-widget[foxybdr-widget-type="foxybdr.layout.column"]' => 'flex: 0 0 100%;',
+                ],
             ]
         );
 

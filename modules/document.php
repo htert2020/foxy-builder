@@ -121,6 +121,14 @@ class Document
         $this->meta['_foxybdr_wi_id'] = (string)$newValue;
     }
 
+    public function widget_instances($newValue = null)
+    {
+        if ($newValue === null)
+            return (string)$this->meta['_foxybdr_widget_instances'];
+
+        $this->meta['_foxybdr_widget_instances'] = (string)$newValue;
+    }
+
     public function render($as_post_content = false)
     {
         $id = $this->post['ID'];

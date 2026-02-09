@@ -85,6 +85,14 @@ class Main
 
     public function plugin_activate()
     {
+        $optStr = get_option('foxybdr_site_settings');
+
+        if ($optStr === false)
+        {
+            $optStr = file_get_contents(FOXYBUILDER_PLUGIN_PATH . 'modules/widgets/settings/site-init.json');
+
+            update_option('foxybdr_site_settings', $optStr);
+        }
     }
 
     public function plugin_deactivate()

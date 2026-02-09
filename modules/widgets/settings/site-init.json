@@ -1,0 +1,10 @@
+{
+    "id": "S-siteSettings",
+    "widgetType": 0,
+    "widgetID": "foxybdr.settings.site",
+    "sparseSettings": {
+        "frontend-mobile": {
+            "mobile": "."
+        }
+    }
+}

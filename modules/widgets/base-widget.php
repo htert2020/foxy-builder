@@ -7,8 +7,10 @@ if (!defined('ABSPATH'))
 
 require_once FOXYBUILDER_PLUGIN_PATH . '/modules/controls/control-type.php';
 require_once FOXYBUILDER_PLUGIN_PATH . '/modules/controls/control-utils.php';
+require_once FOXYBUILDER_PLUGIN_PATH . '/modules/group-controls/group-control-type.php';
 
 use \FoxyBuilder\Modules\Controls\ControlType;
+use \FoxyBuilder\Modules\GroupControls\GroupControlType;
 
 abstract class BaseWidget
 {
@@ -30,9 +32,7 @@ abstract class BaseWidget
     // BASE CLASS MEMBERS AND METHODS
     //////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    protected static $TAB_CONTENT = 'content';
-
-    protected static $TAB_STYLE = 'style';
+    protected static $TAB_WIDGET = 'widget';
 
     protected static $TAB_ADVANCED = 'advanced';
 
@@ -50,6 +50,10 @@ abstract class BaseWidget
 
     protected $evaluated_settings = [];
 
+    protected $defaults = [];
+
+    protected $omit_settings = [];
+
     protected $eval_mode = false;
 
     protected $render_js_file_path = '';
@@ -58,22 +62,16 @@ abstract class BaseWidget
 
     protected function declare_tabs()  // Overriding this method is welcome and encouraged.
     {
-        $this->tabs = [
-            [
-                'title' => 'Content',
-                'name' => self::$TAB_CONTENT,
-                'sections' => [],
-            ],
-            [
-                'title' => 'Style',
-                'name' => self::$TAB_STYLE,
-                'sections' => [],
-            ],
-            [
-                'title' => 'Advanced',
-                'name' => self::$TAB_ADVANCED,
-                'sections' => [],
-            ],
+        $this->tabs[] = [
+            'title' => 'Widget',
+            'name' => self::$TAB_WIDGET,
+            'sections' => [],
+        ];
+
+        $this->tabs[] = [
+            'title' => 'Advanced',
+            'name' => self::$TAB_ADVANCED,
+            'sections' => [],
         ];
     }
 
@@ -154,6 +152,14 @@ abstract class BaseWidget
 
     public function add_control($setting_name, $args)
     {
+        if (in_array($setting_name, $this->omit_settings))
+            return false;
+
+        if (isset($this->defaults[$setting_name]))
+        {
+            $args['default'] = $this->defaults[$setting_name];
+        }
+
         if ($this->eval_mode)
         {
             $this->settings[$setting_name] = $args;
@@ -239,6 +245,16 @@ abstract class BaseWidget
         return true;
     }
 
+    protected function add_defaults($new_defaults)
+    {
+        $this->defaults = array_merge($this->defaults, $new_defaults);
+    }
+
+    protected function omit_setting($setting_name)
+    {
+        $this->omit_settings[] = $setting_name;
+    }
+
     public function init_render()
     {
         $this->eval_mode = true;
@@ -270,7 +286,326 @@ abstract class BaseWidget
     		return $this->evaluated_settings;
 	}
 
-    protected function add_controls_background($tab, $setting_prefix, $selector)
+    protected function add_controls_widget($tab)
+    {
+        $selector_widget = '{{WIDGET}}';
+        $selector_wrapper = '{{WRAPPER}}';
+
+        $setting_prefix = 'widget';
+
+        $this->add_controls_boundary($tab, $selector_wrapper, $setting_prefix);
+
+        $this->add_controls_position($tab, $selector_widget, $setting_prefix);
+
+        $this->add_controls_size($tab, $selector_widget, $setting_prefix);
+
+        $this->add_controls_background($tab, $selector_wrapper, $setting_prefix);
+
+        $this->add_controls_layout($tab, $selector_widget, $setting_prefix);
+    }
+
+    protected function add_controls_position($tab, $selector = '{{WIDGET}}', $setting_prefix = 'widget')
+    {
+        $this->start_controls_section(
+            "{$setting_prefix}_position",
+            [
+                'label' => __('Position', 'foxy-builder'),
+                'tab' => $tab,
+            ]
+        );
+
+        $this->add_control(
+            "{$setting_prefix}_position_position",
+            [
+                'label'   => __('Position', 'foxy-builder'),
+                'type'    => ControlType::$SELECT,
+                'options' => [
+                    ''         => __('Default', 'foxy-builder'),
+                    'absolute' => __('Absolute', 'foxy-builder'),
+                    'fixed'    => __('Fixed', 'foxy-builder'),
+                ],
+                'selectors' => [
+                    $selector => 'position: {{VALUE}}; width: auto;',
+                ],
+            ]
+        );
+
+        $this->add_control(
+            "{$setting_prefix}_position_horizontal-side",
+            [
+                'label' => __('Horizontal Side', 'foxy-builder'),
+                'type' => ControlType::$CHOOSE,
+                'options' => [
+                    'left' => [
+                        'title' => __('Left Side', 'foxy-builder'),
+                        'icon' => 'dashicons dashicons-arrow-right',
+                    ],
+                    'right' => [
+                        'title' => __('Right Side', 'foxy-builder'),
+                        'icon' => 'dashicons dashicons-arrow-left',
+                    ],
+                ],
+                'selectors' => [
+                    $selector => "{{VALUE}}: var(--foxybdr-position-horizontal-offset, 0px)",
+                ],
+            ]
+        );
+
+        $this->add_responsive_control(
+            "{$setting_prefix}_position_horizontal-offset",
+            [
+                'label'   => __('Horizontal Offset', 'foxy-builder'),
+                'type'    => ControlType::$SLIDER,
+                'size_units' => [ 'px', '%', 'vw', 'vh' ],
+                'range' => [
+                    'px' => [
+                        'min' => -400,
+                        'max' =>  400,
+                    ],
+                    '%' => [
+                        'min' => -100,
+                        'max' =>  100,
+                    ],
+                    'vw' => [
+                        'min' => -100,
+                        'max' =>  100,
+                    ],
+                    'vh' => [
+                        'min' => -100,
+                        'max' =>  100,
+                    ],
+                ],
+                'default' => [
+                    'unit' => 'px',
+                    'size' => 0,
+                ],
+                'selectors' => [
+                    $selector => "--foxybdr-position-horizontal-offset: {{SIZE}}{{UNIT}}",
+                ],
+                'condition' => [
+                    "{$setting_prefix}_position_horizontal-side!" => '',
+                ],
+            ]
+        );
+
+        $this->add_control(
+            "{$setting_prefix}_position_vertical-side",
+            [
+                'label' => __('Vertical Side', 'foxy-builder'),
+                'type' => ControlType::$CHOOSE,
+                'options' => [
+                    'top' => [
+                        'title' => __('Top Side', 'foxy-builder'),
+                        'icon' => 'dashicons dashicons-arrow-down',
+                    ],
+                    'bottom' => [
+                        'title' => __('Bottom Side', 'foxy-builder'),
+                        'icon' => 'dashicons dashicons-arrow-up',
+                    ],
+                ],
+                'selectors' => [
+                    $selector => "{{VALUE}}: var(--foxybdr-position-vertical-offset, 0px)",
+                ],
+            ]
+        );
+
+        $this->add_responsive_control(
+            "{$setting_prefix}_position_vertical-offset",
+            [
+                'label'   => __('Vertical Offset', 'foxy-builder'),
+                'type'    => ControlType::$SLIDER,
+                'size_units' => [ 'px', '%', 'vw', 'vh' ],
+                'range' => [
+                    'px' => [
+                        'min' => -400,
+                        'max' =>  400,
+                    ],
+                    '%' => [
+                        'min' => -100,
+                        'max' =>  100,
+                    ],
+                    'vw' => [
+                        'min' => -100,
+                        'max' =>  100,
+                    ],
+                    'vh' => [
+                        'min' => -100,
+                        'max' =>  100,
+                    ],
+                ],
+                'default' => [
+                    'unit' => 'px',
+                    'size' => 0,
+                ],
+                'selectors' => [
+                    $selector => "--foxybdr-position-vertical-offset: {{SIZE}}{{UNIT}}",
+                ],
+                'condition' => [
+                    "{$setting_prefix}_position_vertical-side!" => '',
+                ],
+            ]
+        );
+
+        $this->add_control(
+            "{$setting_prefix}_position_z-index",
+            [
+                'label'   => __('Z Position', 'foxy-builder'),
+                'type'    => ControlType::$NUMBER,
+                'separator' => 'before',
+                'selectors' => [
+                    $selector => 'z-index: {{VALUE}}',
+                ],
+            ]
+        );
+
+        $this->end_controls_section();
+    }
+
+    protected function add_controls_size($tab, $selector = '{{WIDGET}}', $setting_prefix = 'widget')
+    {
+        $this->start_controls_section(
+            "{$setting_prefix}_size",
+            [
+                'label' => __('Size', 'foxy-builder'),
+                'tab' => $tab,
+            ]
+        );
+
+        $this->add_control(
+            "{$setting_prefix}_size_width",
+            [
+                'label'   => __('Width', 'foxy-builder'),
+                'type'    => ControlType::$SELECT,
+                'options' => [
+                    '' => __('Default', 'foxy-builder'),
+                    'auto' => __('Auto', 'foxy-builder'),
+                    'var(--foxybdr-widget-width, 100%)' => __('Custom', 'foxy-builder'),
+                ],
+                'selectors' => [
+                    $selector => 'width: {{VALUE}}',
+                ],
+            ]
+        );
+
+        $this->add_responsive_control(
+            "{$setting_prefix}_size_width-custom",
+            [
+                'label'   => __('Custom Width', 'foxy-builder'),
+                'type'    => ControlType::$SLIDER,
+                'size_units' => [ 'px', '%' ],
+                'range' => [
+                    'px' => [
+                        'min' => 0,
+                        'max' => 800,
+                    ],
+                    '%' => [
+                        'min' => 0,
+                        'max' => 100,
+                    ],
+                ],
+                'selectors' => [
+                    $selector => "--foxybdr-widget-width: {{SIZE}}{{UNIT}}",
+                ],
+                'condition' => [
+                    "{$setting_prefix}_size_width" => 'var(--foxybdr-widget-width, 100%)',
+                ],
+            ]
+        );
+
+        $this->add_responsive_control(
+            "{$setting_prefix}_size_vertical-alignment",
+            [
+                'label'   => __('Vertical Alignment', 'foxy-builder'),
+                'type'    => ControlType::$SELECT,
+                'description' => 'Vertical Alignment controls this widget\'s vertical alignment relative to other widgets positioned on the same line.',
+                'options' => [
+                    ''           => __('Default', 'foxy-builder'),
+                    'stretch'    => __('Stretch', 'foxy-builder'),
+                    'flex-start' => __('Top', 'foxy-builder'),
+                    'center'     => __('Middle', 'foxy-builder'),
+                    'flex-end'   => __('Bottom', 'foxy-builder'),
+                ],
+                'selectors' => [
+                    $selector => 'align-self: {{VALUE}}',
+                ],
+                'condition' => [
+                    "{$setting_prefix}_size_width!" => '',
+                ],
+            ]
+        );
+
+        $this->end_controls_section();
+    }
+
+    protected function add_controls_boundary($tab, $selector = '{{WRAPPER}}', $setting_prefix = 'widget')
+    {
+        $this->start_controls_section(
+            "{$setting_prefix}_boundary",
+            [
+                'label' => __('Boundary', 'foxy-builder'),
+                'tab' => $tab,
+            ]
+        );
+
+        $this->add_responsive_control(
+            "{$setting_prefix}_boundary_margin",
+            [
+                'label' => __('Margin', 'foxy-builder'),
+                'type' => ControlType::$DIMENSIONS,
+                'size_units' => [ 'px', '%', 'em', 'rem' ],
+                'selectors' => [
+                    $selector => 'margin: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}}',
+                ],
+            ]
+        );
+
+        $this->add_responsive_control(
+            "{$setting_prefix}_boundary_padding",
+            [
+                'label' => __('Padding', 'foxy-builder'),
+                'type' => ControlType::$DIMENSIONS,
+                'size_units' => [ 'px', '%', 'em', 'rem' ],
+                'selectors' => [
+                    $selector => 'padding: {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}} {{LEFT}}{{UNIT}}',
+                ],
+            ]
+        );
+
+        $this->add_group_control(
+            GroupControlType::$BORDER,
+            [
+                'name' => "{$setting_prefix}_boundary_border",
+                'selector' => $selector,
+                'separator' => 'before',
+            ]
+        );
+
+        $this->add_responsive_control(
+            "{$setting_prefix}_boundary_border-radius",
+            [
+                'label' => __('Border Radius', 'foxy-builder'),
+                'type' => ControlType::$DIMENSIONS,
+                'sub_type' => 'corners',
+                'size_units' => [ 'px', '%', 'em', 'rem' ],
+                'selectors' => [
+                    $selector => 'border-radius: {{LEFT}}{{UNIT}} {{TOP}}{{UNIT}} {{RIGHT}}{{UNIT}} {{BOTTOM}}{{UNIT}}',
+                ],
+            ]
+        );
+
+        $this->add_group_control(
+            GroupControlType::$BOX_SHADOW,
+            [
+                'name' => "{$setting_prefix}_boundary_box-shadow",
+                'selector' => $selector,
+                'separator' => 'before',
+            ]
+        );
+
+        $this->end_controls_section();
+    }
+
+    protected function add_controls_background($tab, $selector = '{{WRAPPER}}', $setting_prefix = 'widget')
     {
         $image_size_options = \FoxyBuilder\Modules\Controls\ControlUtils::get_image_sizes();
 
@@ -320,7 +655,8 @@ abstract class BaseWidget
                         "background-position: var(--foxybdr-background-position-1);" .
                         "background-size: var(--foxybdr-background-size-1);" .
                         "background-repeat: var(--foxybdr-background-repeat-1);" .
-                        "background-attachment: var(--foxybdr-background-attachment-1);",
+                        "background-attachment: var(--foxybdr-background-attachment-1);" .
+                        "background-blend-mode: var(--foxybdr-background-blend-mode-1);",
                 ],
                 'condition' => [
                     "{$setting_prefix}_background_layer-count" => '1',
@@ -340,7 +676,8 @@ abstract class BaseWidget
                         "background-position: var(--foxybdr-background-position-1), var(--foxybdr-background-position-2);" .
                         "background-size: var(--foxybdr-background-size-1), var(--foxybdr-background-size-2);" .
                         "background-repeat: var(--foxybdr-background-repeat-1), var(--foxybdr-background-repeat-2);" .
-                        "background-attachment: var(--foxybdr-background-attachment-1), var(--foxybdr-background-attachment-2);",
+                        "background-attachment: var(--foxybdr-background-attachment-1), var(--foxybdr-background-attachment-2);" .
+                        "background-blend-mode: var(--foxybdr-background-blend-mode-1), var(--foxybdr-background-blend-mode-2);",
                 ],
                 'condition' => [
                     "{$setting_prefix}_background_layer-count" => '2',
@@ -360,7 +697,8 @@ abstract class BaseWidget
                         "background-position: var(--foxybdr-background-position-1), var(--foxybdr-background-position-2), var(--foxybdr-background-position-3);" .
                         "background-size: var(--foxybdr-background-size-1), var(--foxybdr-background-size-2), var(--foxybdr-background-size-3);" .
                         "background-repeat: var(--foxybdr-background-repeat-1), var(--foxybdr-background-repeat-2), var(--foxybdr-background-repeat-3);" .
-                        "background-attachment: var(--foxybdr-background-attachment-1), var(--foxybdr-background-attachment-2), var(--foxybdr-background-attachment-3);",
+                        "background-attachment: var(--foxybdr-background-attachment-1), var(--foxybdr-background-attachment-2), var(--foxybdr-background-attachment-3);" .
+                        "background-blend-mode: var(--foxybdr-background-blend-mode-1), var(--foxybdr-background-blend-mode-2), var(--foxybdr-background-blend-mode-3);",
                 ],
                 'condition' => [
                     "{$setting_prefix}_background_layer-count" => '3',
@@ -936,7 +1274,120 @@ abstract class BaseWidget
                 );
             }
 
+            $this->add_control(
+                "{$section_prefix}_blend-mode",
+                [
+                    'label'   => __('Blend Mode', 'foxy-builder'),
+                    'type'    => ControlType::$SELECT,
+                    'separator' => 'before',
+                    'options' => [
+                        'normal'      => __('Normal', 'foxy-builder'),
+                        'darken'      => __('Darken', 'foxy-builder'),
+                        'multiply'    => __('Multiply', 'foxy-builder'),
+                        'color-burn'  => __('Color Burn', 'foxy-builder'),
+                        'lighten'     => __('Lighten', 'foxy-builder'),
+                        'screen'      => __('Screen', 'foxy-builder'),
+                        'color-dodge' => __('Color Dodge', 'foxy-builder'),
+                        'overlay'     => __('Overlay', 'foxy-builder'),
+                        'soft-light'  => __('Soft Light', 'foxy-builder'),
+                        'hard-light'  => __('Hard Light', 'foxy-builder'),
+                        'difference'  => __('Difference', 'foxy-builder'),
+                        'exclusion'   => __('Exclusion', 'foxy-builder'),
+                        'hue'         => __('Hue', 'foxy-builder'),
+                        'saturation'  => __('Saturation', 'foxy-builder'),
+                        'color'       => __('Color', 'foxy-builder'),
+                        'luminosity'  => __('Luminosity', 'foxy-builder'),
+                    ],
+                    'default' => 'normal',
+                    'selectors' => [
+                        $selector => "--foxybdr-background-blend-mode-{$i}: {{VALUE}}",
+                    ],
+                ]
+            );
+    
             $this->end_controls_section();
         }
+    }
+
+    protected function add_controls_layout($tab, $selector = '{{WIDGET}}', $setting_prefix = 'widget')
+    {
+        $this->start_controls_section(
+            "{$setting_prefix}_layout",
+            [
+                'label' => __('Layout', 'foxy-builder'),
+                'tab' => $tab,
+            ]
+        );
+
+        $this->add_responsive_control(
+            "{$setting_prefix}_layout_horizontal-alignment",
+            [
+                'label' => __('Alignment', 'foxy-builder'),
+                'type' => ControlType::$CHOOSE,
+                'options' => [
+                    'left' => [
+                        'title' => __('Left', 'foxy-builder'),
+                        'icon' => 'dashicons dashicons-editor-alignleft',
+                    ],
+                    'center' => [
+                        'title' => __('Center', 'foxy-builder'),
+                        'icon' => 'dashicons dashicons-editor-aligncenter',
+                    ],
+                    'right' => [
+                        'title' => __('Right', 'foxy-builder'),
+                        'icon' => 'dashicons dashicons-editor-alignright',
+                    ],
+                    'justify' => [
+                        'title' => __('Justified', 'foxy-builder'),
+                        'icon' => 'dashicons dashicons-editor-justify',
+                    ],
+                ],
+                'selectors' => [
+                    $selector => 'text-align: {{VALUE}}',
+                ],
+            ]
+        );
+
+        $this->end_controls_section();
+    }
+
+    protected function add_controls_advanced($tab)
+    {
+        $selector_widget = '{{WIDGET}}';
+
+        $setting_prefix = 'advanced';
+
+        $this->add_controls_css($tab, $selector_widget, $setting_prefix);
+    }
+
+    protected function add_controls_css($tab, $selector = '{{WIDGET}}', $setting_prefix = 'advanced')
+    {
+        $this->start_controls_section(
+            "{$setting_prefix}_css",
+            [
+                'label' => __('CSS', 'foxy-builder'),
+                'tab' => $tab,
+            ]
+        );
+
+        $this->add_control(
+            "{$setting_prefix}_css_id",
+            [
+                'label'   => __('CSS ID', 'foxy-builder'),
+                'type'    => ControlType::$TEXT,
+                'description' => 'Enter ID without the # symbol.',
+            ]
+        );
+
+        $this->add_control(
+            "{$setting_prefix}_css_classes",
+            [
+                'label'   => __('CSS Classes', 'foxy-builder'),
+                'type'    => ControlType::$TEXTAREA,
+                'description' => 'Enter class name(s) without the dot symbol.',
+            ]
+        );
+
+        $this->end_controls_section();
     }
 }
