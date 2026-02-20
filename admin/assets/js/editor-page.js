@@ -133,45 +133,67 @@ FoxyApp.Function.evaluateCondition = function(condition, sparseSettings, wSettin
 
 FoxyApp.Function.generateWidgetInstanceID = function(domainType, domainID)
 {
+    if ([ 'T', 'C' ].includes(domainType) === false)
+        return null;
+
     while (true)
     {
-        switch (domainType)
+        let widStr = String(Math.round(Math.random() * 999999));
+
+        while (widStr.length < 6)
+            widStr = '0' + widStr;
+
+        let wInstanceID = `${domainType}-${domainID}-${widStr}`;
+
+        let exists = false;
+
+        if (FoxyApp.Model.widgetInstanceMap[wInstanceID] !== undefined)
         {
-            case 'T':
-                {
-                    let widStr = String(Math.round(Math.random() * 999999));
-
-                    while (widStr.length < 6)
-                        widStr = '0' + widStr;
-
-                    let wInstanceID = `T-${FoxyApp.templateID}-${widStr}`;
-
-                    let exists = false;
-
-                    if (FoxyApp.Model.widgetInstanceMap[wInstanceID] !== undefined)
-                    {
-                        exists = true;
-                    }
-                    else
-                    {
-                        for (let action of FoxyApp.Manager.modelManager.undoStack.concat(FoxyApp.Manager.modelManager.redoStack))
-                        {
-                            if (action.wInstanceID === wInstanceID)
-                            {
-                                exists = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    if (exists === false)
-                        return wInstanceID;
-                }
-                break;
-
-            case 'C':
-                break;
+            exists = true;
         }
+        else
+        {
+            for (let action of FoxyApp.Manager.modelManager.undoStack.concat(FoxyApp.Manager.modelManager.redoStack))
+            {
+                if (action.wInstanceID !== null && action.wInstanceID.includes(wInstanceID))
+                {
+                    exists = true;
+                    break;
+                }
+            }
+        }
+
+        if (exists === false)
+            return wInstanceID;
+    }
+}
+
+FoxyApp.Function.generateComponentID = function()
+{
+    while (true)
+    {
+        let id = Math.round(Math.random() * 999999);
+
+        let exists = false;
+
+        if (FoxyApp.Model.componentMap[id] !== undefined)
+        {
+            exists = true;
+        }
+        else
+        {
+            for (let action of FoxyApp.Manager.modelManager.undoStack.concat(FoxyApp.Manager.modelManager.redoStack))
+            {
+                if (action.componentID === id)
+                {
+                    exists = true;
+                    break;
+                }
+            }
+        }
+
+        if (exists === false)
+            return id;
     }
 }
 
@@ -254,6 +276,24 @@ FoxyApp.Class.Event.Model.Template = {};
         }
     };
 
+    FoxyApp.Class.Event.Model.Template.ComponentUpdate = class
+    {
+        type = [ 'Model', 'Template', 'ComponentUpdate' ];
+
+        wInstanceID = '';
+        cwInstanceID = '';
+        settingName = '';
+        settingValue = null;
+
+        constructor(wInstanceID, cwInstanceID, settingName, settingValue)
+        {
+            this.wInstanceID = wInstanceID;
+            this.cwInstanceID = cwInstanceID;
+            this.settingName = settingName;
+            this.settingValue = settingValue;
+        }
+    };
+
     FoxyApp.Class.Event.Model.Template.Delete = class
     {
         type = [ 'Model', 'Template', 'Delete' ];
@@ -267,6 +307,98 @@ FoxyApp.Class.Event.Model.Template = {};
     };
 
 FoxyApp.Class.Event.Model.Component = {};
+
+    FoxyApp.Class.Event.Model.Component.Insert = class
+    {
+        type = [ 'Model', 'Component', 'Insert' ];
+
+        component = null;
+        targetID = null;
+        insertBefore = null;
+
+        constructor(component, targetID, insertBefore)
+        {
+            this.component = component;
+            this.targetID = targetID;
+            this.insertBefore = insertBefore;
+        }
+    };
+
+    FoxyApp.Class.Event.Model.Component.Rename = class
+    {
+        type = [ 'Model', 'Component', 'Rename' ];
+
+        componentID = null;
+        title = null;
+
+        constructor(componentID, title)
+        {
+            this.componentID = componentID;
+            this.title = title;
+        }
+    };
+
+    FoxyApp.Class.Event.Model.Component.Delete = class
+    {
+        type = [ 'Model', 'Component', 'Delete' ];
+
+        componentID = null;
+
+        constructor(componentID)
+        {
+            this.componentID = componentID;
+        }
+    };
+
+FoxyApp.Class.Event.Model.ComponentWidgetInstance = {};
+
+    FoxyApp.Class.Event.Model.ComponentWidgetInstance.Insert = class
+    {
+        type = [ 'Model', 'ComponentWidgetInstance', 'Insert' ];
+
+        widgetInstance = null;
+        componentID = null;
+        targetID = null;
+        insertBefore = null;
+
+        constructor(widgetInstance, componentID, targetID, insertBefore)
+        {
+            this.widgetInstance = widgetInstance;
+            this.componentID = componentID;
+            this.targetID = targetID;
+            this.insertBefore = insertBefore;
+        }
+    };
+
+    FoxyApp.Class.Event.Model.ComponentWidgetInstance.Update = class
+    {
+        type = [ 'Model', 'ComponentWidgetInstance', 'Update' ];
+
+        wInstanceID = '';
+        settingName = '';
+        settingValue = null;
+
+        constructor(wInstanceID, settingName, settingValue)
+        {
+            this.wInstanceID = wInstanceID;
+            this.settingName = settingName;
+            this.settingValue = settingValue;
+        }
+    };
+
+    FoxyApp.Class.Event.Model.ComponentWidgetInstance.Delete = class
+    {
+        type = [ 'Model', 'ComponentWidgetInstance', 'Delete' ];
+
+        componentID = null;
+        wInstanceID = '';
+
+        constructor(componentID, wInstanceID)
+        {
+            this.componentID = componentID;
+            this.wInstanceID = wInstanceID;
+        }
+    };
 
 FoxyApp.Class.Event.Model.Settings = {};
 
@@ -291,10 +423,12 @@ FoxyApp.Class.Event.Model.Selection = class
     type = [ 'Model', 'Selection' ];
 
     wInstanceID = null;
+    cwInstanceID = null;
 
-    constructor(wInstanceID)
+    constructor(wInstanceID, cwInstanceID)
     {
         this.wInstanceID = wInstanceID;
+        this.cwInstanceID = cwInstanceID;
     }
 };
 
@@ -354,6 +488,24 @@ FoxyApp.Class.Command.Model.Template = {};
         }
     };
 
+    FoxyApp.Class.Command.Model.Template.ComponentUpdate = class
+    {
+        type = [ 'Model', 'Template', 'ComponentUpdate' ];
+
+        wInstanceID = '';
+        cwInstanceID = '';
+        settingName = '';
+        settingValue = null;
+
+        constructor(wInstanceID, cwInstanceID, settingName, settingValue)
+        {
+            this.wInstanceID = wInstanceID;
+            this.cwInstanceID = cwInstanceID;
+            this.settingName = settingName;
+            this.settingValue = settingValue;
+        }
+    };
+
     FoxyApp.Class.Command.Model.Template.Delete = class
     {
         type = [ 'Model', 'Template', 'Delete' ];
@@ -367,6 +519,98 @@ FoxyApp.Class.Command.Model.Template = {};
     };
 
 FoxyApp.Class.Command.Model.Component = {};
+
+    FoxyApp.Class.Command.Model.Component.Insert = class
+    {
+        type = [ 'Model', 'Component', 'Insert' ];
+
+        componentData = null;
+        targetID = null;
+        insertBefore = null;
+
+        constructor(componentData, targetID, insertBefore)
+        {
+            this.componentData = componentData;
+            this.targetID = targetID;
+            this.insertBefore = insertBefore;
+        }
+    };
+
+    FoxyApp.Class.Command.Model.Component.Rename = class
+    {
+        type = [ 'Model', 'Component', 'Rename' ];
+
+        componentID = null;
+        title = null;
+
+        constructor(componentID, title)
+        {
+            this.componentID = componentID;
+            this.title = title;
+        }
+    };
+
+    FoxyApp.Class.Command.Model.Component.Delete = class
+    {
+        type = [ 'Model', 'Component', 'Delete' ];
+
+        componentID = null;
+
+        constructor(componentID)
+        {
+            this.componentID = componentID;
+        }
+    };
+
+FoxyApp.Class.Command.Model.ComponentWidgetInstance = {};
+
+    FoxyApp.Class.Command.Model.ComponentWidgetInstance.Insert = class
+    {
+        type = [ 'Model', 'ComponentWidgetInstance', 'Insert' ];
+
+        wInstanceData = null;
+        componentID = null;
+        targetID = null;
+        insertBefore = null;
+
+        constructor(wInstanceData, componentID, targetID, insertBefore)
+        {
+            this.wInstanceData = wInstanceData;
+            this.componentID = componentID;
+            this.targetID = targetID;
+            this.insertBefore = insertBefore;
+        }
+    };
+
+    FoxyApp.Class.Command.Model.ComponentWidgetInstance.Update = class
+    {
+        type = [ 'Model', 'ComponentWidgetInstance', 'Update' ];
+
+        wInstanceID = '';
+        settingName = '';
+        settingValue = null;
+
+        constructor(wInstanceID, settingName, settingValue)
+        {
+            this.wInstanceID = wInstanceID;
+            this.settingName = settingName;
+            this.settingValue = settingValue;
+        }
+    };
+
+    FoxyApp.Class.Command.Model.ComponentWidgetInstance.Delete = class
+    {
+        type = [ 'Model', 'ComponentWidgetInstance', 'Delete' ];
+
+        componentID = null;
+        wInstanceID = '';
+
+        constructor(componentID, wInstanceID)
+        {
+            this.componentID = componentID;
+            this.wInstanceID = wInstanceID;
+        }
+    };
 
 FoxyApp.Class.Command.Model.Settings = {};
 
@@ -391,10 +635,12 @@ FoxyApp.Class.Command.Model.Selection = class
     type = [ 'Model', 'Selection' ];
 
     wInstanceID = null;
+    cwInstanceID = null;
 
-    constructor(wInstanceID)
+    constructor(wInstanceID, cwInstanceID)
     {
         this.wInstanceID = wInstanceID;
+        this.cwInstanceID = cwInstanceID;
     }
 };
 
@@ -661,6 +907,26 @@ FoxyApp.Class.Model.WidgetInstance = class extends FoxyApp.Class.Node
         return data;
     }
 
+    static dropComponents(data)
+    {
+        if (data.children === undefined)
+            return;
+
+        let newChildren = [];
+
+        for (let child of data.children)
+        {
+            if (child.widgetType === 0)
+            {
+                FoxyApp.Class.Model.WidgetInstance.dropComponents(child);
+
+                newChildren.push(child);
+            }
+        }
+
+        data.children = newChildren;
+    }
+
     static generateNewIDs(data, domainType, domainID)
     {
         data.id = FoxyApp.Function.generateWidgetInstanceID(domainType, domainID);
@@ -672,6 +938,22 @@ FoxyApp.Class.Model.WidgetInstance = class extends FoxyApp.Class.Node
                 FoxyApp.Class.Model.WidgetInstance.generateNewIDs(childData, domainType, domainID);
             }
         }
+    }
+
+    static getIDs(wInstanceData)
+    {
+        let ids = [ wInstanceData.id ];
+
+        if (wInstanceData.children === undefined)
+            return ids;
+
+        for (let child of wInstanceData.children)
+        {
+            let cids = FoxyApp.Class.Model.WidgetInstance.getIDs(child);
+            ids = ids.concat(cids);
+        }
+
+        return ids;
     }
 
     setValue(settingName, settingValue)
@@ -698,7 +980,38 @@ FoxyApp.Class.Model.WidgetInstance = class extends FoxyApp.Class.Node
             return null;
     }
 
-    getInsertParams()
+    setComponentValue(cwInstanceID, settingName, settingValue)
+    {
+        let componentSettings = this.data.componentSettings;
+
+        if (settingValue !== null)
+        {
+            if (componentSettings[cwInstanceID] === undefined)
+                componentSettings[cwInstanceID] = {};
+
+            componentSettings[cwInstanceID][settingName] = settingValue;
+        }
+        else if (componentSettings[cwInstanceID] !== undefined)
+        {
+            if (componentSettings[cwInstanceID][settingName] !== undefined)
+                delete componentSettings[cwInstanceID][settingName];
+
+            if (Object.keys(componentSettings[cwInstanceID]).length === 0)
+                delete componentSettings[cwInstanceID];
+        }
+    }
+
+    getComponentValue(cwInstanceID, settingName)
+    {
+        let componentSettings = this.data.componentSettings;
+
+        if (componentSettings[cwInstanceID] !== undefined && componentSettings[cwInstanceID][settingName] !== undefined)
+            return componentSettings[cwInstanceID][settingName];
+        else
+            return null;
+    }
+
+    getInsertParams(rootNode)
     {
         let targetID;
         let insertBefore;
@@ -715,7 +1028,7 @@ FoxyApp.Class.Model.WidgetInstance = class extends FoxyApp.Class.Node
         }
         else
         {
-            targetID = this.parentNode === FoxyApp.Model.widgetInstanceTree ? null : this.parentNode.data.id;
+            targetID = this.parentNode === rootNode ? null : this.parentNode.data.id;
             insertBefore = null;
         }
 
@@ -727,6 +1040,103 @@ FoxyApp.Class.Model.WidgetInstance = class extends FoxyApp.Class.Node
         super.destroy();
 
         delete FoxyApp.Model.widgetInstanceMap[this.data.id];
+    }
+};
+
+FoxyApp.Class.Model.Component = class extends FoxyApp.Class.Node
+{
+    data = {
+        id: -1,
+        title: ''
+    }
+
+    constructor(data)
+    {
+        super();
+
+        this.data = data;
+
+        FoxyApp.Model.componentMap[this.data.id] = this;
+    }
+
+    static loadTree(data)
+    {
+        let children = data.children !== undefined ? data.children : [];
+
+        if (data.children !== undefined)
+            delete data.children;
+
+        let component = new FoxyApp.Class.Model.Component(data);
+
+        for (let child of children)
+        {
+            let childNode = FoxyApp.Class.Model.WidgetInstance.loadTree(child);
+            component.appendChild(childNode);
+        }
+
+        return component;
+    }
+
+    saveTree()
+    {
+        let data = structuredClone(this.data);
+
+        data.children = [];
+
+        for (let childNode of this.children)
+        {
+            let childData = childNode.saveTree();
+            data.children.push(childData);
+        }
+
+        return data;
+    }
+
+    getInsertParams(rootNode)
+    {
+        let targetID;
+        let insertBefore;
+
+        if (this.nextSibling !== null)
+        {
+            targetID = this.nextSibling.data.id;
+            insertBefore = true;
+        }
+        else if (this.previousSibling !== null)
+        {
+            targetID = this.previousSibling.data.id;
+            insertBefore = false;
+        }
+        else
+        {
+            targetID = this.parentNode === rootNode ? null : this.parentNode.data.id;
+            insertBefore = null;
+        }
+
+        return { targetID: targetID, insertBefore: insertBefore };
+    }
+
+    static getWidgetInstanceIDs(componentData)
+    {
+        let ids = [];
+
+        if (componentData.children === undefined)
+            return ids;
+
+        for (let child of componentData.children)
+        {
+            let cids = FoxyApp.Class.Model.WidgetInstance.getIDs(child);
+            ids = ids.concat(cids);
+        }
+
+        return ids;
+    }
+
+    destroy()
+    {
+        super.destroy();
+
+        delete FoxyApp.Model.componentMap[this.data.id];
     }
 };
 
@@ -1013,7 +1423,8 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule = class extends FoxyApp.Cl
 
     domainType = '';
     domainID = null;
-    widgetInstanceID = '';
+    widgetInstanceID = null;
+    cWidgetInstanceID = null;
 
     constructor()
     {
@@ -1047,9 +1458,25 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule = class extends FoxyApp.Cl
             for (let tab of this.#tabs)
                 tab.handleEvent(evt);
         }
-        else if(e instanceof FoxyApp.Class.Event.Model.Template.Update || e instanceof FoxyApp.Class.Event.Model.Settings.Update)
+        else if (e instanceof FoxyApp.Class.Event.Model.Template.Update || e instanceof FoxyApp.Class.Event.Model.Settings.Update)
         {
-            if (e.wInstanceID === this.widgetInstanceID)
+            if (e.wInstanceID === this.widgetInstanceID && this.cWidgetInstanceID === null)
+            {
+                let evt = {
+                    type: 'setting-update',
+                    settingName: e.settingName,
+                    settingValue: e.settingValue
+                };
+
+                for (let tab of this.#tabs)
+                    tab.handleEvent(evt);
+
+                this.#disableConditionalSettings();
+            }
+        }
+        else if (e instanceof FoxyApp.Class.Event.Model.Template.ComponentUpdate)
+        {
+            if (e.wInstanceID === this.widgetInstanceID && e.cwInstanceID === this.cWidgetInstanceID)
             {
                 let evt = {
                     type: 'setting-update',
@@ -1103,14 +1530,19 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule = class extends FoxyApp.Cl
             switch (this.domainType)
             {
                 case 'T':
-                    command = new FoxyApp.Class.Command.Model.Template.Update(this.widgetInstanceID, e.name, e.value);
+                    if (this.cWidgetInstanceID === null)
+                        command = new FoxyApp.Class.Command.Model.Template.Update(this.widgetInstanceID, e.name, e.value);
+                    else
+                        command = new FoxyApp.Class.Command.Model.Template.ComponentUpdate(this.widgetInstanceID, this.cWidgetInstanceID, e.name, e.value);
                     break;
 
                 case 'C':
+                    command = new FoxyApp.Class.Command.Model.ComponentWidgetInstance.Update(this.widgetInstanceID, e.name, e.value);
                     break;
 
                 case 'S':
-                    command = new FoxyApp.Class.Command.Model.Settings.Update(this.widgetInstanceID, e.name, e.value);
+                    if (this.cWidgetInstanceID === null)
+                        command = new FoxyApp.Class.Command.Model.Settings.Update(this.widgetInstanceID, e.name, e.value);
                     break;
             }
             
@@ -1138,44 +1570,54 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule = class extends FoxyApp.Cl
             this.#tabs[i].activate(this.#tabs[i].getName() === name);
     }
 
-    load(domainType, domainID, widgetInstanceID)
+    load(domainType, domainID, widgetInstanceID, cWidgetInstanceID)
     {
         this.unload();
 
         this.domainType = domainType;
         this.domainID = domainID;
         this.widgetInstanceID = widgetInstanceID;
+        this.cWidgetInstanceID = cWidgetInstanceID;
 
         let widgetInstance = FoxyApp.Model.widgetInstanceMap[this.widgetInstanceID];
 
-        switch (widgetInstance.data.widgetType)
+        let widget;
+        let sparseSettings;
+
+        if (this.cWidgetInstanceID === null)
         {
-            case 0:  // based on widget
+            widget = FoxyApp.Model.widgets[widgetInstance.data.widgetType === 0 ? widgetInstance.data.widgetID : 'foxybdr.layout.component'];
 
-                let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetID];
-
-                for (let i = 0; i < widget.tabs.length; i++)
-                {
-                    let tabData = widget.tabs[i];
-
-                    let tab = new FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Tab(i, tabData, widget.settings, widgetInstance.data.sparseSettings);
-                    tab.create(this.#tabsElement, this.#tabBodyElement);
-                    tab.addEventListener(this);
-                    this.#tabs.push(tab);
-                }
-
-                this.#disableConditionalSettings();
-
-                this.#tabsElement.scrollLeft = 0;
-
-                if (this.#tabs.length > 0)
-                    this.activateTabPage(0);
-
-                break;
-
-            case 1:  // based on component
-                break;
+            sparseSettings = widgetInstance.data.sparseSettings;
         }
+        else
+        {
+            let cWidgetInstance = FoxyApp.Model.widgetInstanceMap[this.cWidgetInstanceID];
+
+            widget = FoxyApp.Model.widgets[cWidgetInstance.data.widgetType === 0 ? cWidgetInstance.data.widgetID : 'foxybdr.layout.component'];
+            widget = this.#reduceComponentWidget(widget);
+
+            sparseSettings = widgetInstance.data.componentSettings[this.cWidgetInstanceID];
+            if (sparseSettings === undefined)
+                sparseSettings = {};
+        }
+
+        for (let i = 0; i < widget.tabs.length; i++)
+        {
+            let tabData = widget.tabs[i];
+
+            let tab = new FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Tab(i, tabData, widget.settings, sparseSettings);
+            tab.create(this.#tabsElement, this.#tabBodyElement);
+            tab.addEventListener(this);
+            this.#tabs.push(tab);
+        }
+
+        this.#disableConditionalSettings();
+
+        this.#tabsElement.scrollLeft = 0;
+
+        if (this.#tabs.length > 0)
+            this.activateTabPage(0);
     }
 
     unload()
@@ -1187,20 +1629,17 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule = class extends FoxyApp.Cl
 
         this.domainType = '';
         this.domainID = null;
-        this.widgetInstanceID = '';
+        this.widgetInstanceID = null;
+        this.cWidgetInstanceID = null;
     }
 
     #disableConditionalSettings()
     {
-        if (this.widgetInstanceID === '')
+        if (this.widgetInstanceID === null || this.cWidgetInstanceID !== null)
             return;
 
         let widgetInstance = FoxyApp.Model.widgetInstanceMap[this.widgetInstanceID];
-
-        if (widgetInstance.data.widgetType !== 0)
-            return;
-
-        let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetID];
+        let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetType === 0 ? widgetInstance.data.widgetID : 'foxybdr.layout.component'];
 
         let disabledSections = [];
         let disabledSettingNames = [];
@@ -1247,6 +1686,73 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule = class extends FoxyApp.Cl
         {
             tab.disableConditionalSettings(disabledSections, disabledSettingNames);
         }
+    }
+
+    #reduceComponentWidget(oldWidget)
+    {
+        let widget = structuredClone(oldWidget);
+
+        let newTabs = [];
+
+        for (let tab of widget.tabs)
+        {
+            let newSections = [];
+
+            for (let section of tab.sections)
+            {
+                let omitSection = section.condition !== undefined;
+
+                let sectionSettings = [];
+
+                for (let item of section.settings)
+                {
+                    if (item.type !== 'setting')
+                        continue;
+
+                    let settingName = item.name;
+                    let settingParams = widget.settings[settingName];
+
+                    let omitSetting = false;
+
+                    if ([ 'TEXT', 'TEXTAREA', 'WYSIWYG', 'URL', 'MEDIA', 'ICONS' ].includes(settingParams.type) === false)
+                        omitSetting = true;
+                    else if (settingParams.selector !== undefined || settingParams.selectors !== undefined || settingParams.render_type === 'ui')
+                        omitSetting = true;
+                    else if (settingParams.condition !== undefined)
+                        omitSetting = true;
+                    else if (widget.cssDependencies[settingName] === true)
+                        omitSetting = true;
+                    else if (omitSection)
+                        omitSetting = true;
+
+                    if (omitSetting)
+                    {
+                        delete widget.settings[settingName];
+                    }
+                    else
+                    {
+                        sectionSettings.push(item);
+
+                        if (settingParams.default !== undefined)
+                            delete settingParams.default;
+                    }
+                }
+
+                section.settings = sectionSettings;
+
+                if (section.settings.length > 0)
+                    newSections.push(section);
+            }
+
+            tab.sections = newSections;
+
+            if (tab.sections.length > 0)
+                newTabs.push(tab);
+        }
+
+        widget.tabs = newTabs;
+
+        return widget;
     }
 
     destroy()
@@ -1619,8 +2125,8 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Layout.Tabs = class extend
         this.#layoutElement = FoxyApp.elementCache.cloneElement('foxybdr-tmpl-settings-layout-tabs');
         parentElement.appendChild(this.#layoutElement);
 
-        this.#tabsElement = this.#layoutElement.querySelector('.foxybdr-tabs');
-        this.#bodyElement = this.#layoutElement.querySelector('.foxybdr-tab-body');
+        this.#tabsElement = this.#layoutElement.querySelector('.foxybdr--tabs');
+        this.#bodyElement = this.#layoutElement.querySelector('.foxybdr--tab--body');
     }
 
     addTab(label)
@@ -1628,7 +2134,7 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Layout.Tabs = class extend
         let newIndex = this.#tabsElement.children.length;
 
         let tabElement = document.createElement('div');
-        tabElement.classList.add('foxybdr-tab');
+        tabElement.classList.add('foxybdr--tab');
         tabElement.setAttribute('foxybdr-index', String(newIndex));
         tabElement.innerText = label;
         this.#tabsElement.appendChild(tabElement);
@@ -1649,7 +2155,7 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Layout.Tabs = class extend
 
     handleEvent(e)
     {
-        if (e.type === 'click' && e.currentTarget.classList.contains('foxybdr-tab'))
+        if (e.type === 'click' && e.currentTarget.classList.contains('foxybdr--tab'))
         {
             for (let i = 0; i < this.#tabsElement.children.length; i++)
             {
@@ -1821,14 +2327,18 @@ FoxyApp.Class.UI.Component.PanelModule.SettingsModule_Layout.Popover = class ext
 
 FoxyApp.Class.UI.Component.PanelModule.WidgetsModule = class extends FoxyApp.Class.UI.Component.PanelModule.BaseModule
 {
-    #headerElement = null;
-    #bodyElement = null;
+    #tabElements = [];
+    #tabPageElements = [];
+    #componentContainerElement = null;
+    #componentEmptyMessageElement = null;
 
-    #categories = [];
+    #widgetCategories = [];
 
     constructor()
     {
         super('foxybdr-tmpl-widgets-module');
+
+        FoxyApp.Manager.modelManager.addEventListener('Component', this);
     }
 
     create()
@@ -1837,14 +2347,167 @@ FoxyApp.Class.UI.Component.PanelModule.WidgetsModule = class extends FoxyApp.Cla
 
         let moduleElement = this.getModuleElement();
 
-        this.#headerElement = moduleElement.querySelector('.foxybdr-header');
-        this.#bodyElement = moduleElement.querySelector('.foxybdr-body');
+        let tabElements = moduleElement.querySelectorAll('.foxybdr-tab');
+        for (let i = 0; i < tabElements.length; i++)
+        {
+            this.#tabElements.push(tabElements[i]);
+            this.registerEvent(tabElements[i], 'click');
+        }
+
+        let pageElements = moduleElement.querySelectorAll('.foxybdr-tab-page');
+        for (let i = 0; i < pageElements.length; i++)
+        {
+            this.#tabPageElements.push(pageElements[i]);
+        }
+
+        this.#createWidgetsPage(moduleElement);
+
+        this.#createComponentsPage(moduleElement);
+
+        this.#selectTab('widgets');
+    }
+
+    #createWidgetsPage(moduleElement)
+    {
+        let bodyElement = moduleElement.querySelector('.foxybdr-tab-page[foxybdr-name="widgets"] > .foxybdr-body');
 
         for (let categoryData of FoxyApp.Model.widgetCategories)
         {
             let category = new FoxyApp.Class.UI.Component.PanelModule.WidgetsModule_Category(categoryData);
-            category.create(this.#bodyElement);
-            this.#categories.push(category);
+            category.create(bodyElement);
+            this.#widgetCategories.push(category);
+        }
+    }
+
+    #createComponentsPage(moduleElement)
+    {
+        this.#componentContainerElement = moduleElement.querySelector('.foxybdr-tab-page[foxybdr-name="components"] .foxybdr-component-container');
+        this.#componentEmptyMessageElement = moduleElement.querySelector('.foxybdr-tab-page[foxybdr-name="components"] .foxybdr-empty-message');
+
+        for (let component of FoxyApp.Model.componentTree.children)
+        {
+            let cardElement = this.#createComponentCard(component);
+
+            this.#componentContainerElement.appendChild(cardElement);
+        }
+
+        this.#updateComponentEmptyMessage();
+
+        this.registerEvent(this.#componentContainerElement, 'dragstart');
+        this.registerEvent(this.#componentContainerElement, 'dragend');
+    }
+
+    handleEvent(e)
+    {
+        if (e instanceof FoxyApp.Class.Event.Model.Component.Insert)
+        {
+            this.#insertComponent(e.component, e.targetID, e.insertBefore);
+        }
+        else if (e instanceof FoxyApp.Class.Event.Model.Component.Rename)
+        {
+            this.#renameComponent(e.componentID, e.title);
+        }
+        else if (e instanceof FoxyApp.Class.Event.Model.Component.Delete)
+        {
+            this.#deleteComponent(e.componentID);
+        }
+        else if (e.type === 'click' && e.button === 0 && e.currentTarget.classList.contains('foxybdr-tab'))
+        {
+            let name = e.currentTarget.getAttribute('foxybdr-name');
+
+            this.#selectTab(name);
+        }
+        else if (e.type === 'dragstart' && e.currentTarget === this.#componentContainerElement)
+        {
+            let cardElement = e.target.closest('.foxybdr-widget-card');
+
+            if (cardElement)
+            {
+                e.dataTransfer.setData("text/plain", cardElement.getAttribute('foxybdr-component-id'));
+
+                e.dataTransfer.effectAllowed = "move";
+    
+                FoxyApp.Class.UI.ElementDragDrop.setSourceElement(cardElement);
+            }
+        }
+        else if (e.type === 'dragend' && e.currentTarget === this.#componentContainerElement)
+        {
+            FoxyApp.Class.UI.ElementDragDrop.setSourceElement(null);
+        }
+    }
+
+    #insertComponent(component, targetID, insertBefore)
+    {
+        let newCardElement = this.#createComponentCard(component);
+
+        if (insertBefore === null)
+        {
+            this.#componentContainerElement.appendChild(newCardElement);
+        }
+        else
+        {
+            let targetElement = this.#componentContainerElement.querySelector(`.foxybdr-widget-card[foxybdr-component-id="${targetID}"]`);
+
+            this.#componentContainerElement.insertBefore(newCardElement, insertBefore ? targetElement : targetElement.nextSibling);
+        }
+
+        this.#updateComponentEmptyMessage();
+    }
+
+    #renameComponent(componentID, title)
+    {
+        let cardElement = this.#componentContainerElement.querySelector(`.foxybdr-widget-card[foxybdr-component-id="${componentID}"]`);
+        cardElement.querySelector('span').innerText = title;
+    }
+
+    #deleteComponent(componentID)
+    {
+        let cardElement = this.#componentContainerElement.querySelector(`.foxybdr-widget-card[foxybdr-component-id="${componentID}"]`);
+
+        if (cardElement)
+            cardElement.remove();
+
+        this.#updateComponentEmptyMessage();
+    }
+
+    #selectTab(name)
+    {
+        for (let tabElement of this.#tabElements)
+        {
+            if (tabElement.getAttribute('foxybdr-name') === name)
+                tabElement.classList.add('foxybdr-active');
+            else
+                tabElement.classList.remove('foxybdr-active');
+        }
+
+        for (let pageElement of this.#tabPageElements)
+        {
+            if (pageElement.getAttribute('foxybdr-name') === name)
+                pageElement.classList.add('foxybdr-active');
+            else
+                pageElement.classList.remove('foxybdr-active');
+        }
+    }
+
+    #createComponentCard(component)
+    {
+        let cardElement = FoxyApp.elementCache.cloneElement('foxybdr-tmpl-widgets-module-card');
+        cardElement.setAttribute('foxybdr-component-id', String(component.data.id));
+        cardElement.querySelector('i').className = 'fas fa-cubes';
+        cardElement.querySelector('span').innerText = component.data.title;
+
+        return cardElement;
+    }
+
+    #updateComponentEmptyMessage()
+    {
+        if (this.#componentContainerElement.children.length === 0)
+        {
+            this.#componentEmptyMessageElement.classList.add('foxybdr-show');
+        }
+        else
+        {
+            this.#componentEmptyMessageElement.classList.remove('foxybdr-show');
         }
     }
 
@@ -1852,13 +2515,15 @@ FoxyApp.Class.UI.Component.PanelModule.WidgetsModule = class extends FoxyApp.Cla
     {
         super.destroy();
 
-        for (let category of this.#categories)
+        this.#tabElements = [];
+        this.#tabPageElements = [];
+        this.#componentContainerElement = null;
+        this.#componentEmptyMessageElement = null;
+
+        for (let category of this.#widgetCategories)
             category.destroy();
 
-        this.#categories = [];
-
-        this.#headerElement = null;
-        this.#bodyElement = null;
+        this.#widgetCategories = [];
     }
 };
 
@@ -1977,6 +2642,165 @@ FoxyApp.Class.UI.Component.PanelModule.WidgetsModule_Category_Card = class exten
             this.#cardElement.remove();
             this.#cardElement = null;
         }
+    }
+};
+
+FoxyApp.Class.UI.Component.ContextMenu = class extends FoxyApp.Class.UI.Component.BaseComponent
+{
+    #scopeElement = null;
+    #menuElement = null;
+    #itemElement = null;
+    #windows = [];
+
+    #itemSelector = '';
+    
+    constructor()
+    {
+        super();
+    }
+
+    create(scopeElement, itemSelector)
+    {
+        this.#scopeElement = scopeElement;
+        this.#itemSelector = itemSelector;
+
+        this.registerEvent(this.#scopeElement, 'contextmenu');
+        this.registerEvent(this.#scopeElement, 'mouseup');
+
+        this.#menuElement = document.createElement('div');
+        this.#menuElement.classList.add('foxybdr-context-menu');
+        this.#scopeElement.closest('body').appendChild(this.#menuElement);
+
+        this.registerEvent(this.#menuElement, 'mouseup');
+
+        let iframeElements = document.querySelectorAll('iframe');
+        for (let i = 0; i < iframeElements.length; i++)
+        {
+            let _window = iframeElements[i].contentWindow;
+            this.#windows.push(_window);
+            this.registerEvent(_window, 'mouseup');
+            this.registerEvent(_window, 'keyup');
+        }
+
+        this.registerEvent(window, 'mouseup');
+        this.registerEvent(window, 'keyup');
+        this.#windows.push(window);
+    }
+
+    show(widgetElement, mouseX, mouseY)
+    {
+        if (this.#itemElement)
+        {
+            this.#itemElement.classList.remove('foxybdr-context-menu-hover');
+        }
+
+        this.#itemElement = widgetElement;
+        this.#itemElement.classList.add('foxybdr-context-menu-hover');
+
+        this.#menuElement.classList.add('foxybdr-show');
+        this.#menuElement.style.left = String(mouseX) + 'px';
+        this.#menuElement.style.top  = String(mouseY) + 'px';
+
+        this.#clearMenuItems();
+        this.addMenuItems(this.#itemElement);
+    }
+
+    hide()
+    {
+        if (this.#itemElement === null)
+            return;
+
+        this.#itemElement.classList.remove('foxybdr-context-menu-hover');
+
+        this.#itemElement = null;
+
+        this.#menuElement.classList.remove('foxybdr-show');
+        this.#menuElement.style.left = '';
+        this.#menuElement.style.top  = '';
+
+        this.#clearMenuItems();
+    }
+
+    handleEvent(e)
+    {
+        if (e.type === 'contextmenu' && e.currentTarget === this.#scopeElement && !e.ctrlKey)
+        {
+            e.preventDefault();
+        }
+        else if (e.type === 'mouseup' && e.button === 2 && e.currentTarget === this.#scopeElement && !e.ctrlKey)
+        {
+            let itemElement = e.target.closest(this.#itemSelector);
+
+            if (itemElement !== null)
+            {
+                this.show(itemElement, e.clientX + 2, e.clientY + 2);
+
+                // prevent hiding of context menu
+                e.stopPropagation();
+            }
+        }
+        else if (e.type === 'mouseup' && e.button === 0 && e.currentTarget === this.#menuElement && this.#itemElement !== null)
+        {
+            let menuItemElement = e.target.closest('.foxybdr-context-menu-item');
+
+            if (menuItemElement)
+            {
+                let command = menuItemElement.getAttribute('foxybdr-command');
+
+                this.sendEvent({
+                    type: 'context-menu-command',
+                    command: command,
+                    itemElement: this.#itemElement
+                });
+            }
+        }
+        else if (e.type === 'mouseup' || (e.type === 'keyup' && e.key === 'Escape'))
+        {
+            if (this.#windows.includes(e.currentTarget))
+            {
+                this.hide();
+            }
+        }
+    }
+
+    addMenuItems(itemElement)
+    {
+        /* This is empty base class implementation. Derived classes should override this method, which should call this.addMenuItem() for every
+         * menu item to be added to the context menu, depending on the context. */
+    }
+
+    addMenuItem(command, label)
+    {
+        let menuItemElement = document.createElement('div');
+        menuItemElement.classList.add('foxybdr-context-menu-item');
+        menuItemElement.setAttribute('foxybdr-command', command);
+        this.#menuElement.appendChild(menuItemElement);
+
+        let labelElement = document.createElement('span');
+        labelElement.innerText = label;
+        menuItemElement.appendChild(labelElement);
+    }
+
+    #clearMenuItems()
+    {
+        this.#menuElement.innerHTML = '';
+    }
+
+    destroy()
+    {
+        super.destroy();
+
+        this.#scopeElement = null;
+
+        if (this.#menuElement)
+        {
+            this.#menuElement.remove();
+            this.#menuElement = null;
+        }
+
+        this.#itemElement = null;
+
+        this.#windows = [];
     }
 };
 
@@ -2479,7 +3303,8 @@ FoxyApp.Class.Manager.ModelManager = class
         this.saveAction = {
             redoCommand: null,
             undoCommand: null,
-            wInstanceID: null
+            wInstanceID: null,
+            componentID: null
         };
 
         this.undoStack.push(this.saveAction);
@@ -2507,7 +3332,7 @@ FoxyApp.Class.Manager.ModelManager = class
      */
     submitCommand(submitter, command)
     {
-        this.#executeCommand(submitter, command, false);
+        return this.#executeCommand(submitter, command, false);
     }
 
     /*
@@ -2519,7 +3344,7 @@ FoxyApp.Class.Manager.ModelManager = class
     #executeCommand(submitter, command, isHistory)
     {
         if (command.type[0] !== 'Model')
-            return;
+            return false;
 
         let events;
 
@@ -2527,6 +3352,14 @@ FoxyApp.Class.Manager.ModelManager = class
         {
             case 'Template':
                 events = this.#processCommand_template(command, isHistory);
+                break;
+
+            case 'Component':
+                events = this.#processCommand_component(command, isHistory);
+                break;
+
+            case 'ComponentWidgetInstance':
+                events = this.#processCommand_component_widget_instance(command, isHistory);
                 break;
 
             case 'Settings':
@@ -2541,6 +3374,9 @@ FoxyApp.Class.Manager.ModelManager = class
                 events = this.#processCommand_device(command, isHistory);
                 break;
         }
+
+        if (events === false)
+            return false;
 
         if (events !== undefined)
         {
@@ -2558,6 +3394,8 @@ FoxyApp.Class.Manager.ModelManager = class
                 }
             }
         }
+
+        return true;
     }
 
     #processCommand_template(command, isHistory)
@@ -2569,7 +3407,7 @@ FoxyApp.Class.Manager.ModelManager = class
                 {
                     if (isHistory === false)
                     {
-                        this.#addHistoryAction(this.cloneCommand(command), new FoxyApp.Class.Command.Model.Template.Delete(command.wInstanceData.id), command.wInstanceData.id);
+                        this.#addHistoryAction(this.cloneCommand(command), new FoxyApp.Class.Command.Model.Template.Delete(command.wInstanceData.id), FoxyApp.Class.Model.WidgetInstance.getIDs(command.wInstanceData), null);
                     }
 
                     let widgetInstance = FoxyApp.Class.Model.WidgetInstance.loadTree(command.wInstanceData);
@@ -2589,7 +3427,7 @@ FoxyApp.Class.Manager.ModelManager = class
                     if (isHistory === false)
                     {
                         let oldSettingValue = widgetInstance.getValue(command.settingName);
-                        this.#addHistoryAction(this.cloneCommand(command), new FoxyApp.Class.Command.Model.Template.Update(command.wInstanceID, command.settingName, oldSettingValue), command.wInstanceID);
+                        this.#addHistoryAction(this.cloneCommand(command), new FoxyApp.Class.Command.Model.Template.Update(command.wInstanceID, command.settingName, oldSettingValue), null, null);
                     }
 
                     widgetInstance.setValue(command.settingName, command.settingValue);
@@ -2597,6 +3435,22 @@ FoxyApp.Class.Manager.ModelManager = class
                     return [ new FoxyApp.Class.Event.Model.Template.Update(command.wInstanceID, command.settingName, command.settingValue) ];
                 }
 
+                break;
+
+            case 'ComponentUpdate':
+                {
+                    let widgetInstance = FoxyApp.Model.widgetInstanceMap[command.wInstanceID];
+
+                    if (isHistory === false)
+                    {
+                        let oldSettingValue = widgetInstance.getComponentValue(command.cwInstanceID, command.settingName);
+                        this.#addHistoryAction(this.cloneCommand(command), new FoxyApp.Class.Command.Model.Template.ComponentUpdate(command.wInstanceID, command.cwInstanceID, command.settingName, oldSettingValue), null, null);
+                    }
+
+                    widgetInstance.setComponentValue(command.cwInstanceID, command.settingName, command.settingValue);
+
+                    return [ new FoxyApp.Class.Event.Model.Template.ComponentUpdate(command.wInstanceID, command.cwInstanceID, command.settingName, command.settingValue) ];
+                }
                 break;
 
             case 'Delete':
@@ -2607,8 +3461,8 @@ FoxyApp.Class.Manager.ModelManager = class
                     if (isHistory === false)
                     {
                         let wInstanceData = widgetInstance.saveTree();
-                        const { targetID, insertBefore } = widgetInstance.getInsertParams();
-                        this.#addHistoryAction(this.cloneCommand(command), new FoxyApp.Class.Command.Model.Template.Insert(wInstanceData, targetID, insertBefore), command.wInstanceID);
+                        const { targetID, insertBefore } = widgetInstance.getInsertParams(FoxyApp.Model.widgetInstanceTree);
+                        this.#addHistoryAction(this.cloneCommand(command), new FoxyApp.Class.Command.Model.Template.Insert(wInstanceData, targetID, insertBefore), FoxyApp.Class.Model.WidgetInstance.getIDs(wInstanceData), null);
                     }
 
                     widgetInstance.destroy();
@@ -2618,8 +3472,188 @@ FoxyApp.Class.Manager.ModelManager = class
                     if (FoxyApp.Model.selection.wInstanceID !== null && FoxyApp.Model.widgetInstanceMap[FoxyApp.Model.selection.wInstanceID] === undefined)
                     {
                         FoxyApp.Model.selection.wInstanceID = null;
+                        FoxyApp.Model.selection.cwInstanceID = null;
 
-                        events.push(new FoxyApp.Class.Event.Model.Selection(null));
+                        events.push(new FoxyApp.Class.Event.Model.Selection(null, null));
+                    }
+
+                    return events;
+                }
+
+                break;
+        }
+    }
+
+    #processCommand_component(command, isHistory)
+    {
+        switch (command.type[2])
+        {
+            case 'Insert':
+
+                {
+                    if (isHistory === false)
+                    {
+                        let wids = FoxyApp.Class.Model.Component.getWidgetInstanceIDs(command.componentData);
+                        this.#addHistoryAction(this.cloneCommand(command), new FoxyApp.Class.Command.Model.Component.Delete(command.componentData.id), wids, command.componentData.id);
+                    }
+
+                    let component = FoxyApp.Class.Model.Component.loadTree(command.componentData);
+            
+                    FoxyApp.Class.Node.insertIntoIndexedTree(FoxyApp.Model.componentTree, FoxyApp.Model.componentMap, component, command.targetID, command.insertBefore);
+
+                    return [ new FoxyApp.Class.Event.Model.Component.Insert(component, command.targetID, command.insertBefore) ];
+                }
+
+                break;
+
+            case 'Rename':
+
+                {
+                    let component = FoxyApp.Model.componentMap[command.componentID];
+
+                    if (isHistory === false)
+                    {
+                        let oldTitle = component.data.title;
+                        this.#addHistoryAction(this.cloneCommand(command), new FoxyApp.Class.Command.Model.Component.Rename(command.componentID, oldTitle), null, null);
+                    }
+
+                    component.data.title = command.title;
+
+                    return [ new FoxyApp.Class.Event.Model.Component.Rename(command.componentID, command.title) ];
+                }
+
+                break;
+
+            case 'Delete':
+
+                {
+                    let hasDependencies = false;
+                    for (let wid in FoxyApp.Model.widgetInstanceMap)
+                    {
+                        let wi = FoxyApp.Model.widgetInstanceMap[wid];
+                        if (wi.data.widgetType === 1 && wi.data.widgetID === command.componentID)
+                        {
+                            hasDependencies = true;
+                            break;
+                        }
+                    }
+                    if (hasDependencies)
+                    {
+                        (new FoxyBuilder.Dialogs.Alert({
+                            title: FOXYBUILDER.dialogs.componentDep.title,
+                            message: FOXYBUILDER.dialogs.componentDep.message,
+                            okLabel: FOXYBUILDER.dialogs.componentDep.okLabel
+                        })).create();
+                    
+                        return false;
+                    }
+
+                    let component = FoxyApp.Model.componentMap[command.componentID];
+
+                    if (isHistory === false)
+                    {
+                        let componentData = component.saveTree();
+                        let wids = FoxyApp.Class.Model.Component.getWidgetInstanceIDs(componentData);
+                        const { targetID, insertBefore } = component.getInsertParams(FoxyApp.Model.componentTree);
+                        this.#addHistoryAction(this.cloneCommand(command), new FoxyApp.Class.Command.Model.Component.Insert(componentData, targetID, insertBefore), wids, command.componentID);
+                    }
+
+                    component.destroy();
+
+                    let events = [ new FoxyApp.Class.Event.Model.Component.Delete(command.componentID) ];
+
+                    if (FoxyApp.Model.selection.wInstanceID  !== null && FoxyApp.Model.widgetInstanceMap[FoxyApp.Model.selection.wInstanceID]  === undefined ||
+                        FoxyApp.Model.selection.cwInstanceID !== null && FoxyApp.Model.widgetInstanceMap[FoxyApp.Model.selection.cwInstanceID] === undefined)
+                    {
+                        FoxyApp.Model.selection.wInstanceID = null;
+                        FoxyApp.Model.selection.cwInstanceID = null;
+
+                        events.push(new FoxyApp.Class.Event.Model.Selection(null, null));
+                    }
+
+                    return events;
+                }
+
+                break;
+        }
+    }
+
+    #processCommand_component_widget_instance(command, isHistory)
+    {
+        switch (command.type[2])
+        {
+            case 'Insert':
+
+                {
+                    if (isHistory === false)
+                    {
+                        this.#addHistoryAction(this.cloneCommand(command), new FoxyApp.Class.Event.Model.ComponentWidgetInstance.Delete(command.componentID, command.wInstanceData.id), FoxyApp.Class.Model.WidgetInstance.getIDs(command.wInstanceData), null);
+                    }
+
+                    let widgetInstance = FoxyApp.Class.Model.WidgetInstance.loadTree(command.wInstanceData);
+
+                    let component = FoxyApp.Model.componentMap[command.componentID];
+
+                    FoxyApp.Class.Node.insertIntoIndexedTree(component, FoxyApp.Model.widgetInstanceMap, widgetInstance, command.targetID, command.insertBefore);
+
+                    return [ new FoxyApp.Class.Event.Model.ComponentWidgetInstance.Insert(widgetInstance, command.componentID, command.targetID, command.insertBefore) ];
+                }
+
+                break;
+
+            case 'Update':
+
+                {
+                    let widgetInstance = FoxyApp.Model.widgetInstanceMap[command.wInstanceID];
+
+                    if (isHistory === false)
+                    {
+                        let oldSettingValue = widgetInstance.getValue(command.settingName);
+                        this.#addHistoryAction(this.cloneCommand(command), new FoxyApp.Class.Command.Model.ComponentWidgetInstance.Update(command.wInstanceID, command.settingName, oldSettingValue), null, null);
+                    }
+
+                    widgetInstance.setValue(command.settingName, command.settingValue);
+
+                    return [ new FoxyApp.Class.Event.Model.ComponentWidgetInstance.Update(command.wInstanceID, command.settingName, command.settingValue) ];
+                }
+
+                break;
+
+            case 'Delete':
+
+                {
+                    let widgetInstance = FoxyApp.Model.widgetInstanceMap[command.wInstanceID];
+
+                    if (this.#hasComponentDependencies(widgetInstance))
+                    {
+                        (new FoxyBuilder.Dialogs.Alert({
+                            title: FOXYBUILDER.dialogs.componentDep.title,
+                            message: FOXYBUILDER.dialogs.componentDep.message,
+                            okLabel: FOXYBUILDER.dialogs.componentDep.okLabel
+                        })).create();
+                    
+                        return false;
+                    }
+
+                    if (isHistory === false)
+                    {
+                        let wInstanceData = widgetInstance.saveTree();
+                        let component = FoxyApp.Model.componentMap[command.componentID];
+                        const { targetID, insertBefore } = widgetInstance.getInsertParams(component);
+                        this.#addHistoryAction(this.cloneCommand(command), new FoxyApp.Class.Command.Model.ComponentWidgetInstance.Insert(wInstanceData, command.componentID, targetID, insertBefore), FoxyApp.Class.Model.WidgetInstance.getIDs(wInstanceData), null);
+                    }
+
+                    widgetInstance.destroy();
+
+                    let events = [ new FoxyApp.Class.Event.Model.ComponentWidgetInstance.Delete(command.componentID, command.wInstanceID) ];
+
+                    if (FoxyApp.Model.selection.wInstanceID  !== null && FoxyApp.Model.widgetInstanceMap[FoxyApp.Model.selection.wInstanceID]  === undefined ||
+                        FoxyApp.Model.selection.cwInstanceID !== null && FoxyApp.Model.widgetInstanceMap[FoxyApp.Model.selection.cwInstanceID] === undefined)
+                    {
+                        FoxyApp.Model.selection.wInstanceID = null;
+                        FoxyApp.Model.selection.cwInstanceID = null;
+
+                        events.push(new FoxyApp.Class.Event.Model.Selection(null, null));
                     }
 
                     return events;
@@ -2641,7 +3675,7 @@ FoxyApp.Class.Manager.ModelManager = class
                     if (isHistory === false)
                     {
                         let oldSettingValue = widgetInstance.getValue(command.settingName);
-                        this.#addHistoryAction(this.cloneCommand(command), new FoxyApp.Class.Command.Model.Settings.Update(command.wInstanceID, command.settingName, oldSettingValue), command.wInstanceID);
+                        this.#addHistoryAction(this.cloneCommand(command), new FoxyApp.Class.Command.Model.Settings.Update(command.wInstanceID, command.settingName, oldSettingValue), null, null);
                     }
 
                     widgetInstance.setValue(command.settingName, command.settingValue);
@@ -2657,9 +3691,10 @@ FoxyApp.Class.Manager.ModelManager = class
     {
         if (command instanceof FoxyApp.Class.Command.Model.Selection)
         {
-            FoxyApp.Model.selection.wInstanceID = command.wInstanceID;
+            FoxyApp.Model.selection.wInstanceID  = command.wInstanceID;
+            FoxyApp.Model.selection.cwInstanceID = command.cwInstanceID;
 
-            return [ new FoxyApp.Class.Event.Model.Selection(command.wInstanceID) ];
+            return [ new FoxyApp.Class.Event.Model.Selection(command.wInstanceID, command.cwInstanceID) ];
         }
     }
 
@@ -2677,11 +3712,19 @@ FoxyApp.Class.Manager.ModelManager = class
     {
         let newCommand = Object.assign(Object.create(Object.getPrototypeOf(command)), command);
 
-        if (newCommand instanceof FoxyApp.Class.Command.Model.Template.Insert)
+        if (newCommand instanceof FoxyApp.Class.Command.Model.Template.Insert ||
+            newCommand instanceof FoxyApp.Class.Command.Model.ComponentWidgetInstance.Insert)
         {
             newCommand.wInstanceData = structuredClone(command.wInstanceData);
         }
-        else if (newCommand instanceof FoxyApp.Class.Command.Model.Template.Update)
+        else if (newCommand instanceof FoxyApp.Class.Command.Model.Component.Insert)
+        {
+            newCommand.componentData = structuredClone(command.componentData);
+        }
+        else if (
+            newCommand instanceof FoxyApp.Class.Command.Model.Template.Update ||
+            newCommand instanceof FoxyApp.Class.Command.Model.Template.ComponentUpdate ||
+            newCommand instanceof FoxyApp.Class.Command.Model.ComponentWidgetInstance.Update)
         {
             if (typeof newCommand.settingValue === 'object')
                 newCommand.settingValue = structuredClone(command.settingValue);
@@ -2695,7 +3738,7 @@ FoxyApp.Class.Manager.ModelManager = class
         return newCommand;
     }
 
-    #addHistoryAction(redoCommand, undoCommand, wInstanceID)
+    #addHistoryAction(redoCommand, undoCommand, wInstanceID, componentID)
     {
         let mergeActions = false;
 
@@ -2708,9 +3751,19 @@ FoxyApp.Class.Manager.ModelManager = class
                 let previousCommand = previousAction.redoCommand;
 
                 if (previousCommand instanceof FoxyApp.Class.Command.Model.Template.Update && redoCommand instanceof FoxyApp.Class.Command.Model.Template.Update ||
+                    previousCommand instanceof FoxyApp.Class.Command.Model.ComponentWidgetInstance.Update && redoCommand instanceof FoxyApp.Class.Command.Model.ComponentWidgetInstance.Update ||
                     previousCommand instanceof FoxyApp.Class.Command.Model.Settings.Update && redoCommand instanceof FoxyApp.Class.Command.Model.Settings.Update)
                 {
                     if (previousCommand.wInstanceID === redoCommand.wInstanceID && previousCommand.settingName === redoCommand.settingName)
+                    {
+                        mergeActions = true;
+
+                        previousAction.redoCommand = redoCommand;
+                    }
+                }
+                else if (previousCommand instanceof FoxyApp.Class.Command.Model.Template.ComponentUpdate && redoCommand instanceof FoxyApp.Class.Command.Model.Template.ComponentUpdate)
+                {
+                    if (previousCommand.wInstanceID === redoCommand.wInstanceID && previousCommand.cwInstanceID === redoCommand.cwInstanceID && previousCommand.settingName === redoCommand.settingName)
                     {
                         mergeActions = true;
 
@@ -2725,7 +3778,8 @@ FoxyApp.Class.Manager.ModelManager = class
             this.undoStack.push({
                 redoCommand: redoCommand,
                 undoCommand: undoCommand,
-                wInstanceID: wInstanceID
+                wInstanceID: wInstanceID,
+                componentID: componentID
             });
         }
 
@@ -2739,46 +3793,71 @@ FoxyApp.Class.Manager.ModelManager = class
             listener.handleEvent(event, null);
     }
 
-    undo(stepCount)
+    undo()
     {
-        for (let i = 0; i < stepCount; i++)
+        if (this.undoStack.length > 0 && this.undoStack[this.undoStack.length - 1].undoCommand !== null)
         {
-            if (this.undoStack.length > 0 && this.undoStack[this.undoStack.length - 1].undoCommand !== null)
+            let action = this.undoStack.pop();
+
+            let undoCommand = this.cloneCommand(action.undoCommand);
+
+            if (this.#executeCommand(null, undoCommand, true) === false)
             {
-                let action = this.undoStack.pop();
-
-                this.redoStack.push(action);
-
-                let undoCommand = this.cloneCommand(action.undoCommand);
-
-                this.#executeCommand(null, undoCommand, true);
+                this.undoStack.push(action);
+                return false;
             }
+
+            this.redoStack.push(action);
         }
 
         let event = new FoxyApp.Class.Event.History();
         for (let listener of this.#eventListeners['History'])
             listener.handleEvent(event, null);
+
+        return true;
     }
 
-    redo(stepCount)
+    redo()
     {
-        for (let i = 0; i < stepCount; i++)
+        if (this.redoStack.length > 0)
         {
-            if (this.redoStack.length > 0)
+            let action = this.redoStack.pop();
+
+            let redoCommand = this.cloneCommand(action.redoCommand);
+
+            if (this.#executeCommand(null, redoCommand, true) === false)
             {
-                let action = this.redoStack.pop();
-
-                this.undoStack.push(action);
-
-                let redoCommand = this.cloneCommand(action.redoCommand);
-
-                this.#executeCommand(null, redoCommand, true);
+                this.redoStack.push(action);
+                return false;
             }
+
+            this.undoStack.push(action);
         }
 
         let event = new FoxyApp.Class.Event.History();
         for (let listener of this.#eventListeners['History'])
             listener.handleEvent(event, null);
+
+        return true;
+    }
+
+    #hasComponentDependencies(widgetInstance)
+    {
+        for (let wid in FoxyApp.Model.widgetInstanceMap)
+        {
+            let wi = FoxyApp.Model.widgetInstanceMap[wid];
+
+            if (wi.data.widgetType === 1 && wi.data.componentSettings[widgetInstance.data.id] !== undefined)
+                return true;
+        }
+
+        for (let childNode of widgetInstance.children)
+        {
+            if (this.#hasComponentDependencies(childNode) === true)
+                return true;
+        }
+
+        return false;
     }
 
     destroy()
@@ -2863,6 +3942,144 @@ FoxyApp.Class.Manager.PanelManager = class extends FoxyApp.Class.UI.Component.Ba
     }
 };
 
+FoxyApp.Class.Manager.DrawerManager = class extends FoxyApp.Class.UI.Component.BaseComponent
+{
+    #drawerElement = null;
+    #tabsElement = null;
+    #tabBodyElement = null;
+
+    #moduleItems = [];
+
+    constructor()
+    {
+        super();
+    }
+
+    create()
+    {
+        this.#drawerElement = document.querySelector('#foxybdr-drawer');
+        this.#tabsElement = this.#drawerElement.querySelector('.foxybdr-tabs');
+        this.#tabBodyElement = this.#drawerElement.querySelector('.foxybdr-tab-body');
+
+        this.registerEvent(this.#drawerElement.querySelector('.foxybdr-pin-button'), 'click');
+
+        this.registerEvent(this.#tabsElement, 'wheel');
+    }
+
+    registerModule(module, title, tabPageElement)
+    {
+        let tabElement = document.createElement('div');
+        tabElement.classList.add('foxybdr-tab');
+        tabElement.innerText = title;
+        this.#tabsElement.appendChild(tabElement);
+
+        this.registerEvent(tabElement, 'click');
+
+        this.#tabBodyElement.appendChild(tabPageElement);
+
+        this.#moduleItems.push({
+            tabElement: tabElement,
+            tabPageElement: tabPageElement,
+            module: module
+        });
+
+        if (this.#moduleItems.length === 1)
+        {
+            tabElement.classList.add('foxybdr-active');
+            tabPageElement.classList.add('foxybdr-active');
+        }
+    }
+
+    handleEvent(e)
+    {
+        if (e.type === 'click' && e.button === 0 && e.currentTarget.classList.contains('foxybdr-tab') && e.currentTarget.classList.contains('foxybdr-active') === false)
+        {
+            for (let moduleItem of this.#moduleItems)
+            {
+                if (moduleItem.tabElement === e.currentTarget)
+                {
+                    moduleItem.tabElement.classList.add('foxybdr-active');
+                    moduleItem.tabPageElement.classList.add('foxybdr-active');
+                }
+                else
+                {
+                    moduleItem.tabElement.classList.remove('foxybdr-active');
+                    moduleItem.tabPageElement.classList.remove('foxybdr-active');
+                }
+            }
+        }
+        else if (e.type === 'click' && e.button === 0 && e.currentTarget.classList.contains('foxybdr-pin-button'))
+        {
+            e.currentTarget.classList.toggle('foxybdr-active');
+
+            if (e.currentTarget.classList.contains('foxybdr-active'))
+                this.#drawerElement.classList.add('foxybdr-pinned');
+            else
+                this.#drawerElement.classList.remove('foxybdr-pinned');
+        }
+        else if (e.type === 'wheel' && e.currentTarget === this.#tabsElement)
+        {
+            e.preventDefault();
+
+            let scrollLeft = this.#tabsElement.scrollLeft;
+
+            switch (e.deltaMode)
+            {
+                case WheelEvent.DOM_DELTA_PIXEL:
+                    scrollLeft += e.deltaY / 3.0;
+                    break;
+
+                case WheelEvent.DOM_DELTA_LINE:
+                    scrollLeft += e.deltaY * 33.3;
+                    break;
+
+                case WheelEvent.DOM_DELTA_PAGE:
+                    scrollLeft += e.deltaY * this.#tabsElement.clientWidth;
+                    break;
+            }
+
+            let scrollRange = this.#tabsElement.scrollWidth - this.#tabsElement.clientWidth;
+            scrollLeft = Math.min(Math.max(scrollLeft, 0), scrollRange);
+
+            this.#tabsElement.scrollLeft = scrollLeft;
+        }
+    }
+
+    activate(module)
+    {
+        for (let moduleItem of this.#moduleItems)
+        {
+            if (moduleItem.module === module)
+            {
+                moduleItem.tabElement.classList.add('foxybdr-active');
+                moduleItem.tabPageElement.classList.add('foxybdr-active');
+            }
+            else
+            {
+                moduleItem.tabElement.classList.remove('foxybdr-active');
+                moduleItem.tabPageElement.classList.remove('foxybdr-active');
+            }
+        }
+    }
+
+    destroy()
+    {
+        super.destroy();
+
+        this.#drawerElement = null;
+        this.#tabsElement = null;
+        this.#tabBodyElement = null;
+
+        for (let moduleItem of this.#moduleItems)
+        {
+            moduleItem.tabElement.remove();
+            moduleItem.tabPageElement.remove();
+        }
+
+        this.#moduleItems = [];
+    }
+};
+
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // VIEW CLASSES
@@ -2886,7 +4103,7 @@ FoxyApp.Class.View.PanelModule.SiteSettingsModule = class extends FoxyApp.Class.
 
         FoxyApp.Manager.panelManager.registerPanelModule(this, 'foxybdr-toolbar-btn-site-settings');
 
-        this.load('S', null, 'S-siteSettings');
+        this.load('S', null, 'S-siteSettings', null);
     }
 
     activate(show)
@@ -2950,19 +4167,18 @@ FoxyApp.Class.View.PanelModule.PropertiesModule = class extends FoxyApp.Class.UI
 
         if (show)
         {
-            let wInstanceID = FoxyApp.Model.selection.wInstanceID;
+            let wInstanceID  = FoxyApp.Model.selection.wInstanceID;
+            let cwInstanceID = FoxyApp.Model.selection.cwInstanceID;
 
-            // Here, wInstanceID must NOT be null, or something went terribly wrong.
-
-            if (wInstanceID !== this.widgetInstanceID)
+            if (wInstanceID !== this.widgetInstanceID || cwInstanceID !== this.cWidgetInstanceID)
             {
                 let parts = wInstanceID.split('-');
 
-                this.load(parts[0], null, wInstanceID);
+                this.load(parts[0], null, wInstanceID, cwInstanceID);
             }
 
             let panelModuleTitle = '';
-            let widgetInstance = FoxyApp.Model.widgetInstanceMap[wInstanceID];
+            let widgetInstance = FoxyApp.Model.widgetInstanceMap[cwInstanceID !== null ? cwInstanceID : wInstanceID];
             switch (widgetInstance.data.widgetType)
             {
                 case 0:  // widget
@@ -2983,7 +4199,7 @@ FoxyApp.Class.View.PanelModule.PropertiesModule = class extends FoxyApp.Class.UI
 
             if (FoxyApp.Model.selection.wInstanceID !== null)
             {
-                let command = new FoxyApp.Class.Command.Model.Selection(null);
+                let command = new FoxyApp.Class.Command.Model.Selection(null, null);
                 FoxyApp.Manager.modelManager.submitCommand(this, command);
             }
 
@@ -3010,9 +4226,1009 @@ FoxyApp.Class.View.PanelModule.WidgetsModule = class extends FoxyApp.Class.UI.Co
     {
         super.activate(show);
 
-        return 'Insert Widget';
+        return 'Add New';
     }
 }
+
+FoxyApp.Class.View.DrawerModule = {};
+
+FoxyApp.Class.View.DrawerModule.WidgetInstanceNode = class extends FoxyApp.Class.ElementNode
+{
+    wInstanceID = '';
+    #nodeMap = null;
+
+    constructor(wInstanceID, nodeMap)
+    {
+        let element = FoxyApp.elementCache.cloneElement('foxybdr-tmpl-tree-item');
+        let containerElement = element.querySelector('.foxybdr-container');
+
+        super(element, containerElement);
+
+        this.wInstanceID = wInstanceID;
+        this.#nodeMap = nodeMap;
+
+        if (this.#nodeMap[this.wInstanceID] === undefined)
+            this.#nodeMap[this.wInstanceID] = [];
+
+        this.#nodeMap[this.wInstanceID].push(this);
+    }
+
+    render(deep)
+    {
+        let widgetInstance = FoxyApp.Model.widgetInstanceMap[this.wInstanceID];
+        let widgetType = widgetInstance.data.widgetType;
+        let widgetID = widgetInstance.data.widgetID;
+
+        let title;
+        let isContainer;
+
+        switch (widgetType)
+        {
+            case 0:
+                {
+                    let widget = FoxyApp.Model.widgets[widgetID];
+                    title = widget.title;
+                    isContainer = widget.container;
+                }
+                break;
+
+            case 1:
+                {
+                    let component = FoxyApp.Model.componentMap[widgetID];
+                    title = `Component: ${component.data.title}`;
+                    isContainer = true;
+                }
+                break;
+        }
+
+        this.element.querySelector('.foxybdr-title').innerText = title;
+        this.element.setAttribute('foxybdr-instance-id', this.wInstanceID);
+        this.element.setAttribute('foxybdr-widget-type', widgetType === 0 ? widgetID : 'foxybdr.layout.component');
+
+        if (isContainer)
+        {
+            this.element.classList.add('foxybdr-expandable');
+            this.element.classList.add('foxybdr-expanded');
+        }
+        else
+        {
+            this.element.classList.remove('foxybdr-expandable');
+        }
+
+        if (deep === true)
+        {
+            let newChildNodes = [];
+
+            switch (widgetType)
+            {
+                case 0:
+                    {
+                        for (let childWidgetInstance of widgetInstance.children)
+                        {
+                            let newChildNode = new FoxyApp.Class.View.DrawerModule.WidgetInstanceNode(childWidgetInstance.data.id, this.#nodeMap);
+                            newChildNode.render(deep);
+                            newChildNodes.push(newChildNode);
+                        }
+                    }
+                    break;
+
+                case 1:
+                    {
+                        let component = FoxyApp.Model.componentMap[widgetID];
+
+                        for (let childWidgetInstance of component.children)
+                        {
+                            let newChildNode = new FoxyApp.Class.View.DrawerModule.WidgetInstanceNode(childWidgetInstance.data.id, this.#nodeMap);
+                            newChildNode.render(deep);
+                            newChildNodes.push(newChildNode);
+                        }
+                    }
+                    break;
+            }
+
+            for (let oldChildNode of [ ...this.children ])
+            {
+                this.removeChild(oldChildNode);
+                oldChildNode.destroy();
+            }
+
+            for (let newChildNode of newChildNodes)
+                this.appendChild(newChildNode);
+        }
+    }
+
+    select(select)
+    {
+        if (select)
+            this.element.classList.add('foxybdr-selected');
+        else
+            this.element.classList.remove('foxybdr-selected');
+    }
+
+    destroy()
+    {
+        super.destroy();
+
+        let index = this.#nodeMap[this.wInstanceID].indexOf(this);
+        this.#nodeMap[this.wInstanceID].splice(index, 1);
+
+        if (this.#nodeMap[this.wInstanceID].length === 0)
+            delete this.#nodeMap[this.wInstanceID];
+
+        this.#nodeMap = null;
+    }
+};
+
+FoxyApp.Class.View.DrawerModule.ComponentNode = class extends FoxyApp.Class.ElementNode
+{
+    componentID = -1;
+    #cNodeMap = null;
+    #wNodeMap = null;
+
+    constructor(componentID, cNodeMap, wNodeMap)
+    {
+        let element = FoxyApp.elementCache.cloneElement('foxybdr-tmpl-tree-item');
+        let containerElement = element.querySelector('.foxybdr-container');
+
+        super(element, containerElement);
+
+        this.componentID = componentID;
+        this.#cNodeMap = cNodeMap;
+        this.#wNodeMap = wNodeMap;
+
+        this.#cNodeMap[this.componentID] = this;
+    }
+
+    render(deep)
+    {
+        let component = FoxyApp.Model.componentMap[this.componentID];
+
+        this.element.querySelector('.foxybdr-title').innerText = component.data.title;
+        this.element.setAttribute('foxybdr-component-id', String(this.componentID));
+
+        this.element.classList.add('foxybdr-expandable');
+        this.element.classList.add('foxybdr-expanded');
+
+        if (deep === true)
+        {
+            let newChildNodes = [];
+
+            for (let childWidgetInstance of component.children)
+            {
+                let newChildNode = new FoxyApp.Class.View.DrawerModule.WidgetInstanceNode(childWidgetInstance.data.id, this.#wNodeMap);
+                newChildNode.render(deep);
+                newChildNodes.push(newChildNode);
+            }
+
+            for (let oldChildNode of [ ...this.children ])
+            {
+                this.removeChild(oldChildNode);
+                oldChildNode.destroy();
+            }
+
+            for (let newChildNode of newChildNodes)
+                this.appendChild(newChildNode);
+        }
+    }
+
+    select(select)
+    {
+        if (select)
+            this.element.classList.add('foxybdr-selected');
+        else
+            this.element.classList.remove('foxybdr-selected');
+    }
+
+    destroy()
+    {
+        super.destroy();
+
+        delete this.#cNodeMap[this.componentID];
+
+        this.#cNodeMap = null;
+        this.#wNodeMap = null;
+    }
+};
+
+FoxyApp.Class.View.DrawerModule.Template = class extends FoxyApp.Class.UI.Component.BaseComponent
+{
+    #tabPageElement = null;
+    #treeContainerElement = null;
+
+    #nodeTree = null;
+    #nodeMap = {};
+
+    #dragDropProcessor = null;
+
+    #contextMenu = null;
+
+    constructor()
+    {
+        super();
+
+        FoxyApp.Manager.modelManager.addEventListener('Template', this);
+        FoxyApp.Manager.modelManager.addEventListener('Component', this);
+        FoxyApp.Manager.modelManager.addEventListener('ComponentWidgetInstance', this);
+        FoxyApp.Manager.modelManager.addEventListener('Selection', this);
+    }
+
+    create()
+    {
+        this.#tabPageElement = FoxyApp.elementCache.cloneElement('foxybdr-tmpl-drawer-template');
+
+        FoxyApp.Manager.drawerManager.registerModule(this, 'Document', this.#tabPageElement);
+
+        this.#treeContainerElement = this.#tabPageElement.querySelector('.foxybdr-tree-container');
+
+        this.#nodeTree = new FoxyApp.Class.ElementNode(this.#treeContainerElement, this.#treeContainerElement);
+
+        for (let widgetInstance of FoxyApp.Model.widgetInstanceTree.children)
+        {
+            let newNode = new FoxyApp.Class.View.DrawerModule.WidgetInstanceNode(widgetInstance.data.id, this.#nodeMap);
+
+            newNode.render(true);
+
+            this.#nodeTree.appendChild(newNode);
+        }
+
+        this.registerEvent(this.#treeContainerElement, 'click');
+
+        this.#dragDropProcessor = new FoxyApp.Class.UI.ElementDragDrop();
+        this.#dragDropProcessor.create(this.#treeContainerElement, this.#treeContainerElement.closest('#foxybdr-drawer > .foxybdr-tab-body'), 8.0, '%');
+        this.#dragDropProcessor.addSourceType(
+            '.foxybdr-widget-card[foxybdr-widget-name="foxybdr.layout.section"]',
+            null,
+            null
+        );
+        this.#dragDropProcessor.addSourceType(
+            '.foxybdr-widget-card[foxybdr-widget-name="foxybdr.layout.column"]',
+            '.foxybdr-tree-item[foxybdr-widget-type="foxybdr.layout.section"] > .foxybdr-dropdown > .foxybdr-container',
+            null
+        );
+        this.#dragDropProcessor.addSourceType(
+            '.foxybdr-widget-card:not([foxybdr-widget-name="foxybdr.layout.section"], [foxybdr-widget-name="foxybdr.layout.column"])',
+            '.foxybdr-tree-item[foxybdr-widget-type="foxybdr.layout.column"] > .foxybdr-dropdown > .foxybdr-container, .foxybdr-tree-item[foxybdr-widget-type="foxybdr.layout.block"][foxybdr-instance-id^="T-"] > .foxybdr-dropdown > .foxybdr-container',
+            null
+        );
+        this.#dragDropProcessor.addEventListener(this);
+
+        this.#contextMenu = new FoxyApp.Class.View.DrawerModule.Template_ContextMenu();
+        this.#contextMenu.create(this.#treeContainerElement, '.foxybdr-tree-item');
+        this.#contextMenu.addEventListener(this);
+
+        this.#updateEmptyMessage();
+    }
+
+    handleEvent(e)
+    {
+        if (e instanceof FoxyApp.Class.Event.Model.Template.Insert)
+        {
+            this.insertWidgetInstance(e.widgetInstance, e.targetID, e.insertBefore);
+        }
+        else if (e instanceof FoxyApp.Class.Event.Model.Template.Delete)
+        {
+            this.deleteWidgetInstance(e.wInstanceID);
+        }
+        else if (e instanceof FoxyApp.Class.Event.Model.Component.Rename)
+        {
+            this.renameComponent(e.componentID, e.title);
+        }
+        else if (e instanceof FoxyApp.Class.Event.Model.ComponentWidgetInstance.Insert)
+        {
+            this.insertCWidgetInstance(e.widgetInstance, e.componentID, e.targetID, e.insertBefore);
+        }
+        else if (e instanceof FoxyApp.Class.Event.Model.ComponentWidgetInstance.Delete)
+        {
+            this.deleteWidgetInstance(e.wInstanceID);
+        }
+        else if (e instanceof FoxyApp.Class.Event.Model.Selection)
+        {
+            for (let wInstanceID in this.#nodeMap)
+            {
+                for (let node of this.#nodeMap[wInstanceID])
+                {
+                    let select = false;
+
+                    if (e.wInstanceID !== null && e.cwInstanceID !== null && e.wInstanceID.startsWith('T-') && e.cwInstanceID.startsWith('C-'))
+                    {
+                        select = wInstanceID === e.cwInstanceID && node.element.matches(`.foxybdr-tree-item[foxybdr-instance-id="${e.wInstanceID}"] .foxybdr-tree-item`);
+                    }
+                    else if (e.wInstanceID !== null && e.cwInstanceID === null && e.wInstanceID.startsWith('T-'))
+                    {
+                        select = wInstanceID === e.wInstanceID;
+                    }
+
+                    node.select(select);
+                }
+            }
+        }
+        else if (e.type === 'click' && e.button === 0 && e.currentTarget === this.#treeContainerElement)
+        {
+            if (e.target.matches('.foxybdr-tree-item > .foxybdr-header > .foxybdr-expander, .foxybdr-tree-item > .foxybdr-header > .foxybdr-expander *'))
+            {
+                let treeItemElement = e.target.closest('.foxybdr-tree-item');
+
+                if (treeItemElement.classList.contains('foxybdr-expandable'))
+                {
+                    treeItemElement.classList.toggle('foxybdr-expanded');
+                }
+            }
+            else if (e.target.matches('.foxybdr-tree-item > .foxybdr-header > .foxybdr-card, .foxybdr-tree-item > .foxybdr-header > .foxybdr-card *'))
+            {
+                let treeItemElement = e.target.closest('.foxybdr-tree-item');
+                let wInstanceID = treeItemElement.getAttribute('foxybdr-instance-id');
+                let cwInstanceID = null;
+
+                if (wInstanceID.startsWith('C-'))
+                {
+                    cwInstanceID = wInstanceID;
+                    wInstanceID = treeItemElement.closest('.foxybdr-tree-item[foxybdr-widget-type="foxybdr.layout.component"]').getAttribute('foxybdr-instance-id');
+                }
+
+                let same = FoxyApp.Model.selection.wInstanceID === wInstanceID && FoxyApp.Model.selection.cwInstanceID === cwInstanceID;
+                let command = new FoxyApp.Class.Command.Model.Selection(same ? null : wInstanceID, same ? null : cwInstanceID);
+                FoxyApp.Manager.modelManager.submitCommand(null, command);
+            }
+        }
+        else if (e.type === 'element-drop' && e.currentTarget === this.#dragDropProcessor)
+        {
+            if (e.sourceElement.classList.contains('foxybdr-widget-card'))
+            {
+                let widgetName = e.sourceElement.getAttribute('foxybdr-widget-name');
+                let componentIDStr = e.sourceElement.getAttribute('foxybdr-component-id');
+                let widgetType = widgetName !== null ? 0 : 1;
+                let widgetID = widgetType === 0 ? widgetName : Number(componentIDStr);
+
+                let wInstanceID = FoxyApp.Function.generateWidgetInstanceID('T', FoxyApp.templateID);
+
+                let wInstanceData = {
+                    id: wInstanceID,
+                    widgetType: widgetType,
+                    widgetID: widgetID,
+                    sparseSettings: {}
+                };
+                if (widgetType === 1)
+                    wInstanceData.componentSettings = {};
+
+                let targetID = e.targetElement === this.#treeContainerElement ? null : e.targetElement.closest('.foxybdr-tree-item').getAttribute('foxybdr-instance-id');
+
+                let command = new FoxyApp.Class.Command.Model.Template.Insert(wInstanceData, targetID, e.insertBefore);
+                FoxyApp.Manager.modelManager.submitCommand(null, command);
+
+                command = new FoxyApp.Class.Command.Model.Selection(wInstanceID, null);
+                FoxyApp.Manager.modelManager.submitCommand(null, command);
+            }
+        }
+        else if (e.type === 'context-menu-command')
+        {
+            let wInstanceID = e.itemElement.getAttribute('foxybdr-instance-id');
+            this.#onContextMenuCommand(e.command, wInstanceID, e.itemElement);
+        }
+    }
+
+    #onContextMenuCommand(contextMenuCommand, wInstanceID, itemElement)
+    {
+        switch (contextMenuCommand)
+        {
+            case 'edit':
+                {
+                    let cwInstanceID = null;
+
+                    if (wInstanceID.startsWith('C-'))
+                    {
+                        cwInstanceID = wInstanceID;
+                        wInstanceID = itemElement.closest('.foxybdr-tree-item[foxybdr-widget-type="foxybdr.layout.component"]').getAttribute('foxybdr-instance-id');
+                    }
+
+                    let command = new FoxyApp.Class.Command.Model.Selection(wInstanceID, cwInstanceID);
+                    FoxyApp.Manager.modelManager.submitCommand(null, command);
+                }
+                break;
+
+            case 'delete':
+                {
+                    if (wInstanceID.startsWith('T-'))
+                    {
+                        let command = new FoxyApp.Class.Command.Model.Template.Delete(wInstanceID);
+                        FoxyApp.Manager.modelManager.submitCommand(null, command);
+                    }
+                }
+                break;
+
+            case 'copy':
+                {
+
+                }
+                break;
+
+            case 'cut':
+                {
+
+                }
+                break;
+
+            case 'paste':
+                {
+
+                }
+                break;
+
+            case 'create-component':
+                {
+                    let _this = this;
+
+                    (new FoxyBuilder.Dialogs.Prompt({
+                        title: 'Create Component',
+                        message: 'Name:',
+                        inputValue: 'My Component',
+                        cancelLabel: 'Cancel',
+                        okLabel: 'Create',
+                        onCancel: null,
+                        onOK: function(inputStr) {
+                            _this.createComponent(wInstanceID, inputStr);
+                        }
+                    })).create();
+                }
+                break;
+        }
+    }
+
+    insertWidgetInstance(widgetInstance, targetID, insertBefore)
+    {
+        if (insertBefore === null)
+        {
+            let parentNodes = targetID === null ? [ this.#nodeTree ] : this.#nodeMap[targetID];
+
+            if (parentNodes !== undefined)
+            {
+                for (let parentNode of parentNodes)
+                {
+                    let newNode = new FoxyApp.Class.View.DrawerModule.WidgetInstanceNode(widgetInstance.data.id, this.#nodeMap);
+                    newNode.render(true);
+            
+                    parentNode.appendChild(newNode);
+                }
+            }
+        }
+        else
+        {
+            let targetNodes = this.#nodeMap[targetID];
+
+            if (targetNodes !== undefined)
+            {
+                for (let targetNode of targetNodes)
+                {
+                    let newNode = new FoxyApp.Class.View.DrawerModule.WidgetInstanceNode(widgetInstance.data.id, this.#nodeMap);
+                    newNode.render(true);
+            
+                    let parentNode = targetNode.parentNode;
+                    parentNode.insertBefore(newNode, insertBefore ? targetNode : targetNode.nextSibling);
+                }
+            }
+        }
+
+        this.#updateEmptyMessage();
+    }
+
+    renameComponent(componentID, title)
+    {
+        for (let wInstanceID in this.#nodeMap)
+        {
+            let wi = FoxyApp.Model.widgetInstanceMap[wInstanceID];
+
+            if (wi.data.widgetType === 1 && wi.data.widgetID === componentID)
+            {
+                let nodes = this.#nodeMap[wInstanceID];
+
+                for (let node of nodes)
+                    node.render(false);
+            }
+        }
+    }
+
+    insertCWidgetInstance(widgetInstance, componentID, targetID, insertBefore)
+    {
+        for (let wInstanceID in this.#nodeMap)
+        {
+            let wi = FoxyApp.Model.widgetInstanceMap[wInstanceID];
+
+            if (wi.data.widgetType === 1 && wi.data.widgetID === componentID)
+            {
+                let nodes = this.#nodeMap[wInstanceID];
+
+                for (let node of nodes)
+                    node.render(true);
+            }
+        }
+    }
+
+    deleteWidgetInstance(wInstanceID)
+    {
+        let nodes = this.#nodeMap[wInstanceID];
+
+        if (nodes === undefined)
+            return;
+
+        for (let node of nodes)
+            node.destroy();
+
+        this.#updateEmptyMessage();
+    }
+
+    createComponent(wInstanceID, title)
+    {
+        let widgetInstance = FoxyApp.Model.widgetInstanceMap[wInstanceID];
+
+        // Widget instance must not be part of an existing component.
+        if (wInstanceID.split('-')[0] !== 'T')
+            return;
+
+        if (widgetInstance.data.widgetType === 0 && [ 'foxybdr.layout.section', 'foxybdr.layout.column' ].includes(widgetInstance.data.widgetID))
+            return;
+
+        if (widgetInstance.data.widgetType !== 0)
+            return;
+
+        let componentID = FoxyApp.Function.generateComponentID();
+
+        let wInstanceData = widgetInstance.saveTree();
+        FoxyApp.Class.Model.WidgetInstance.dropComponents(wInstanceData);
+        FoxyApp.Class.Model.WidgetInstance.generateNewIDs(wInstanceData, 'C', componentID);
+
+        let componentData = {
+            id: componentID,
+            title: title,
+            children: [ wInstanceData ]
+        }
+
+        let command = new FoxyApp.Class.Command.Model.Component.Insert(componentData, null, null);
+        FoxyApp.Manager.modelManager.submitCommand(null, command);
+    }
+
+    #updateEmptyMessage()
+    {
+        let emptyMessageElement = this.#tabPageElement.querySelector('.foxybdr-empty-message');
+
+        if (this.#nodeTree.children.length === 0)
+            emptyMessageElement.classList.add('foxybdr-show');
+        else
+            emptyMessageElement.classList.remove('foxybdr-show');
+    }
+
+    destroy()
+    {
+        super.destroy();
+
+        this.#tabPageElement = null;
+
+        this.#treeContainerElement = null;
+
+        if (this.#nodeTree !== null)
+        {
+            this.#nodeTree.destroy();
+            this.#nodeTree = null;
+        }
+
+        this.#nodeMap = {};
+
+        if (this.#dragDropProcessor !== null)
+        {
+            this.#dragDropProcessor.destroy();
+            this.#dragDropProcessor = null;
+        }
+
+        if (this.#contextMenu !== null)
+        {
+            this.#contextMenu.destroy();
+            this.#contextMenu = null;
+        }
+    }
+};
+
+FoxyApp.Class.View.DrawerModule.Template_ContextMenu = class extends FoxyApp.Class.UI.Component.ContextMenu
+{
+    constructor()
+    {
+        super();
+    }
+
+    addMenuItems(itemElement)
+    {
+        let wInstanceID = itemElement.getAttribute('foxybdr-instance-id');
+        let widgetInstance = FoxyApp.Model.widgetInstanceMap[wInstanceID];
+        let widgetType = widgetInstance.data.widgetType;
+        let widgetID = widgetInstance.data.widgetID;
+
+        let isSection = false;
+        let isColumn = false;
+        let isBlock = false;
+
+        if (widgetType === 0)  // widget
+        {
+            isSection = widgetID === 'foxybdr.layout.section';
+            isColumn = widgetID === 'foxybdr.layout.column';
+            isBlock = widgetID === 'foxybdr.layout.block';
+        }
+
+        let isTemplate = wInstanceID.split('-')[0] === 'T';
+
+        this.addMenuItem('edit', 'Edit');
+
+        if (isTemplate)
+        {
+            this.addMenuItem('delete', 'Delete');
+            this.addMenuItem('copy', 'Copy');
+            this.addMenuItem('cut', 'Cut');
+            this.addMenuItem('paste', 'Paste');
+        }
+
+        if (!isSection && !isColumn && isTemplate && widgetType === 0)
+            this.addMenuItem('create-component', 'Create Component...');
+    }
+
+    destroy()
+    {
+        super.destroy();
+    }
+};
+
+FoxyApp.Class.View.DrawerModule.Components = class extends FoxyApp.Class.UI.Component.BaseComponent
+{
+    #tabPageElement = null;
+    #treeContainerElement = null;
+
+    #nodeTree = null;
+    #cNodeMap = {};
+    #wNodeMap = {};
+
+    #dragDropProcessor = null;
+
+    #contextMenu = null;
+
+    constructor()
+    {
+        super();
+
+        FoxyApp.Manager.modelManager.addEventListener('Component', this);
+        FoxyApp.Manager.modelManager.addEventListener('ComponentWidgetInstance', this);
+        FoxyApp.Manager.modelManager.addEventListener('Selection', this);
+    }
+
+    create()
+    {
+        this.#tabPageElement = FoxyApp.elementCache.cloneElement('foxybdr-tmpl-drawer-components');
+
+        FoxyApp.Manager.drawerManager.registerModule(this, 'Components', this.#tabPageElement);
+
+        this.#treeContainerElement = this.#tabPageElement.querySelector('.foxybdr-tree-container');
+
+        this.#nodeTree = new FoxyApp.Class.ElementNode(this.#treeContainerElement, this.#treeContainerElement);
+
+        for (let component of FoxyApp.Model.componentTree.children)
+        {
+            let newNode = new FoxyApp.Class.View.DrawerModule.ComponentNode(component.data.id, this.#cNodeMap, this.#wNodeMap);
+
+            newNode.render(true);
+
+            this.#nodeTree.appendChild(newNode);
+        }
+
+        this.registerEvent(this.#treeContainerElement, 'click');
+
+        this.#dragDropProcessor = new FoxyApp.Class.UI.ElementDragDrop();
+        this.#dragDropProcessor.create(this.#treeContainerElement, this.#treeContainerElement.closest('#foxybdr-drawer > .foxybdr-tab-body'), 8.0, '%');
+        this.#dragDropProcessor.addSourceType(
+            '.foxybdr-widget-card:not([foxybdr-widget-name="foxybdr.layout.section"], [foxybdr-widget-name="foxybdr.layout.column"], [foxybdr-component-id])',
+            '.foxybdr-tree-item[foxybdr-component-id] > .foxybdr-dropdown > .foxybdr-container, .foxybdr-tree-item[foxybdr-widget-type="foxybdr.layout.block"] > .foxybdr-dropdown > .foxybdr-container',
+            null
+        );
+        this.#dragDropProcessor.addEventListener(this);
+
+        this.#contextMenu = new FoxyApp.Class.View.DrawerModule.Components_ContextMenu();
+        this.#contextMenu.create(this.#treeContainerElement, '.foxybdr-tree-item');
+        this.#contextMenu.addEventListener(this);
+
+        this.#updateEmptyMessage();
+    }
+
+    handleEvent(e)
+    {
+        if (e instanceof FoxyApp.Class.Event.Model.Component.Insert)
+        {
+            this.insertComponent(e.component, e.targetID, e.insertBefore);
+        }
+        else if (e instanceof FoxyApp.Class.Event.Model.Component.Rename)
+        {
+            this.renameComponent(e.componentID, e.title);
+        }
+        else if (e instanceof FoxyApp.Class.Event.Model.Component.Delete)
+        {
+            this.deleteComponent(e.componentID);
+        }
+        else if (e instanceof FoxyApp.Class.Event.Model.ComponentWidgetInstance.Insert)
+        {
+            this.insertCWidgetInstance(e.widgetInstance, e.componentID, e.targetID, e.insertBefore);
+        }
+        else if (e instanceof FoxyApp.Class.Event.Model.ComponentWidgetInstance.Delete)
+        {
+            this.deleteCWidgetInstance(e.componentID, e.wInstanceID);
+        }
+        else if (e instanceof FoxyApp.Class.Event.Model.Selection)
+        {
+            for (let wInstanceID in this.#wNodeMap)
+            {
+                for (let node of this.#wNodeMap[wInstanceID])
+                {
+                    node.select(wInstanceID === e.wInstanceID && e.cwInstanceID === null);
+                }
+            }
+        }
+        else if (e.type === 'click' && e.button === 0 && e.currentTarget === this.#treeContainerElement)
+        {
+            if (e.target.matches('.foxybdr-tree-item > .foxybdr-header > .foxybdr-expander, .foxybdr-tree-item > .foxybdr-header > .foxybdr-expander *'))
+            {
+                let treeItemElement = e.target.closest('.foxybdr-tree-item');
+
+                if (treeItemElement.classList.contains('foxybdr-expandable'))
+                {
+                    treeItemElement.classList.toggle('foxybdr-expanded');
+                }
+            }
+            else if (e.target.matches('.foxybdr-tree-item > .foxybdr-header > .foxybdr-card, .foxybdr-tree-item > .foxybdr-header > .foxybdr-card *'))
+            {
+                let treeItemElement = e.target.closest('.foxybdr-tree-item');
+                let wInstanceID = treeItemElement.getAttribute('foxybdr-instance-id');
+                if (wInstanceID !== null)
+                {
+                    let same = FoxyApp.Model.selection.wInstanceID === wInstanceID && FoxyApp.Model.selection.cwInstanceID === null;
+                    let command = new FoxyApp.Class.Command.Model.Selection(same ? null : wInstanceID, null);
+                    FoxyApp.Manager.modelManager.submitCommand(null, command);
+                }
+            }
+        }
+        else if (e.type === 'element-drop' && e.currentTarget === this.#dragDropProcessor)
+        {
+            if (e.sourceElement.classList.contains('foxybdr-widget-card'))
+            {
+                let componentItemElement = e.targetElement.closest('.foxybdr-tree-item[foxybdr-component-id]');
+                let componentID = Number(componentItemElement.getAttribute('foxybdr-component-id'));
+
+                let wInstanceID = FoxyApp.Function.generateWidgetInstanceID('C', componentID);
+                let widgetID = e.sourceElement.getAttribute('foxybdr-widget-name');
+
+                let wInstanceData = {
+                    id: wInstanceID,
+                    widgetType: 0,
+                    widgetID: widgetID,
+                    sparseSettings: {}
+                };
+
+                let targetItemElement = e.targetElement.closest('.foxybdr-tree-item');
+                let targetID = targetItemElement === componentItemElement ? null : targetItemElement.getAttribute('foxybdr-instance-id');
+
+                let command = new FoxyApp.Class.Command.Model.ComponentWidgetInstance.Insert(wInstanceData, componentID, targetID, e.insertBefore);
+                FoxyApp.Manager.modelManager.submitCommand(null, command);
+
+                command = new FoxyApp.Class.Command.Model.Selection(wInstanceID, null);
+                FoxyApp.Manager.modelManager.submitCommand(null, command);
+            }
+        }
+        else if (e.type === 'context-menu-command')
+        {
+            this.#onContextMenuCommand(e.command, e.itemElement);
+        }
+    }
+
+    insertComponent(component, targetID, insertBefore)
+    {
+        let newNode = new FoxyApp.Class.View.DrawerModule.ComponentNode(component.data.id, this.#cNodeMap, this.#wNodeMap);
+        newNode.render(true);
+
+        if (insertBefore === null)
+        {
+            let parentNode = targetID === null ? this.#nodeTree : this.#cNodeMap[targetID];
+            parentNode.appendChild(newNode);
+        }
+        else
+        {
+            let targetNode = this.#cNodeMap[targetID];
+            let parentNode = targetNode.parentNode;
+            parentNode.insertBefore(newNode, insertBefore ? targetNode : targetNode.nextSibling);
+        }
+
+        this.#updateEmptyMessage();
+    }
+
+    insertCWidgetInstance(widgetInstance, componentID, targetID, insertBefore)
+    {
+        let componentNode = this.#cNodeMap[componentID];
+        componentNode.render(true);
+    }
+
+    deleteCWidgetInstance(componentID, wInstanceID)
+    {
+        let nodes = this.#wNodeMap[wInstanceID];
+
+        if (nodes === undefined)
+            return;
+
+        for (let node of [ ...nodes ])
+            node.destroy();
+    }
+
+    renameComponent(componentID, title)
+    {
+        let componentNode = this.#cNodeMap[componentID];
+        componentNode.render(false);
+    }
+
+    deleteComponent(componentID)
+    {
+        let componentNode = this.#cNodeMap[componentID];
+        componentNode.destroy();
+
+        this.#updateEmptyMessage();
+    }
+
+    requestRenameComponent(componentID, newTitle)
+    {
+        let command = new FoxyApp.Class.Command.Model.Component.Rename(componentID, newTitle);
+        FoxyApp.Manager.modelManager.submitCommand(null, command);
+    }
+
+    #onContextMenuCommand(command, itemElement)
+    {
+        let componentIdStr = itemElement.getAttribute('foxybdr-component-id');
+
+        if (componentIdStr !== null)
+        {
+            switch (command)
+            {
+                case 'rename':
+                    {
+                        let componentID = Number(componentIdStr);
+                        let component = FoxyApp.Model.componentMap[componentID];
+                        let _this = this;
+
+                        (new FoxyBuilder.Dialogs.Prompt({
+                            title: 'Rename Component',
+                            message: 'Name:',
+                            inputValue: component.data.title,
+                            cancelLabel: 'Cancel',
+                            okLabel: 'Rename',
+                            onCancel: null,
+                            onOK: function(inputStr) {
+                                _this.requestRenameComponent(componentID, inputStr);
+                            }
+                        })).create();
+                    }
+                    break;
+
+                case 'delete':
+                    {
+                        let componentID = Number(componentIdStr);
+
+                        let command = new FoxyApp.Class.Command.Model.Component.Delete(componentID);
+                        FoxyApp.Manager.modelManager.submitCommand(null, command);
+                    }
+                    break;
+            }
+        }
+        else
+        {
+            switch (command)
+            {
+                case 'edit':
+                    {
+                        let wInstanceID = itemElement.getAttribute('foxybdr-instance-id');
+                        let command = new FoxyApp.Class.Command.Model.Selection(wInstanceID, null);
+                        FoxyApp.Manager.modelManager.submitCommand(null, command);
+                    }
+                    break;
+
+                case 'delete':
+                    {
+                        let componentItemElement = itemElement.closest('.foxybdr-tree-item[foxybdr-component-id]');
+                        let componentID = Number(componentItemElement.getAttribute('foxybdr-component-id'));
+        
+                        let wInstanceID = itemElement.getAttribute('foxybdr-instance-id');
+
+                        let command = new FoxyApp.Class.Command.Model.ComponentWidgetInstance.Delete(componentID, wInstanceID);
+                        FoxyApp.Manager.modelManager.submitCommand(null, command);
+                    }
+                    break;
+                    
+                case 'copy':
+                    {
+
+                    }
+                    break;
+                    
+                case 'cut':
+                    {
+
+                    }
+                    break;
+                    
+                case 'paste':
+                    {
+
+                    }
+                    break;
+            }
+        }
+    }
+
+    #updateEmptyMessage()
+    {
+        let emptyMessageElement = this.#tabPageElement.querySelector('.foxybdr-empty-message');
+
+        if (this.#nodeTree.children.length === 0)
+            emptyMessageElement.classList.add('foxybdr-show');
+        else
+            emptyMessageElement.classList.remove('foxybdr-show');
+    }
+
+    destroy()
+    {
+        super.destroy();
+
+        this.#tabPageElement = null;
+
+        this.#treeContainerElement = null;
+
+        if (this.#nodeTree !== null)
+        {
+            this.#nodeTree.destroy();
+            this.#nodeTree = null;
+        }
+
+        this.#cNodeMap = {};
+        this.#wNodeMap = {};
+
+        if (this.#dragDropProcessor !== null)
+        {
+            this.#dragDropProcessor.destroy();
+            this.#dragDropProcessor = null;
+        }
+
+        if (this.#contextMenu !== null)
+        {
+            this.#contextMenu.destroy();
+            this.#contextMenu = null;
+        }
+    }
+};
+
+FoxyApp.Class.View.DrawerModule.Components_ContextMenu = class extends FoxyApp.Class.UI.Component.ContextMenu
+{
+    constructor()
+    {
+        super();
+    }
+
+    addMenuItems(itemElement)
+    {
+        if (itemElement.getAttribute('foxybdr-component-id') !== null)
+        {
+            this.addMenuItem('rename', 'Rename');
+            this.addMenuItem('delete', 'Delete');
+        }
+        else
+        {
+            this.addMenuItem('edit', 'Edit');
+            this.addMenuItem('delete', 'Delete');
+            this.addMenuItem('copy', 'Copy');
+            this.addMenuItem('cut', 'Cut');
+            this.addMenuItem('paste', 'Paste');
+        }
+    }
+
+    destroy()
+    {
+        super.destroy();
+    }
+};
 
 FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseComponent
 {
@@ -3040,6 +5256,7 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
         super();
 
         FoxyApp.Manager.modelManager.addEventListener('Template', this);
+        FoxyApp.Manager.modelManager.addEventListener('ComponentWidgetInstance', this);
         FoxyApp.Manager.modelManager.addEventListener('Settings', this);
         FoxyApp.Manager.modelManager.addEventListener('Selection', this);
         FoxyApp.Manager.modelManager.addEventListener('Device', this);
@@ -3069,8 +5286,6 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
             this.#templateElement = this.#iFrameElement.contentDocument.querySelector(`.foxybdr-template.foxybdr-post-content`);
             this.#templateElement.classList.add('foxybdr-editor');
             this.registerEvent(this.#templateElement, 'click');
-            this.registerEvent(this.#templateElement, 'mouseup');
-            this.registerEvent(this.#templateElement, 'contextmenu');
         }
 
         if (this.#dragDropProcessor === null)
@@ -3089,7 +5304,7 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
             );
             this.#dragDropProcessor.addSourceType(
                 '.foxybdr-widget-card:not([foxybdr-widget-name="foxybdr.layout.section"], [foxybdr-widget-name="foxybdr.layout.column"])',
-                '.foxybdr-widget[foxybdr-widget-type="foxybdr.layout.column"] > .foxybdr-widget-container, .foxybdr-widget[foxybdr-widget-type="foxybdr.layout.block"] > .foxybdr-widget-container',
+                '.foxybdr-widget[foxybdr-widget-type="foxybdr.layout.column"] > .foxybdr-widget-container, .foxybdr-widget[foxybdr-widget-type="foxybdr.layout.block"][foxybdr-instance-id^="T-"] > .foxybdr-widget-container',
                 '.foxybdr-template'
             );
             this.#dragDropProcessor.addEventListener(this);
@@ -3111,13 +5326,8 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
         if (this.#contextMenu === null)
         {
             this.#contextMenu = new FoxyApp.Class.View.Canvas_ContextMenu();
-            this.#contextMenu.create(this.#iFrameElement.contentDocument.body);
+            this.#contextMenu.create(this.#templateElement, '.foxybdr-widget');
             this.#contextMenu.addEventListener(this);
-
-            this.registerEvent(this.#iFrameElement.contentWindow, 'mouseup');
-            this.registerEvent(window, 'mouseup');
-            this.registerEvent(this.#iFrameElement.contentWindow, 'keyup');
-            this.registerEvent(window, 'keyup');
         }
 
         this.installAssets();
@@ -3139,7 +5349,23 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
         {
             this.updateWidgetInstance(e.wInstanceID, e.settingName, e.settingValue);
         }
+        else if (e instanceof FoxyApp.Class.Event.Model.Template.ComponentUpdate)
+        {
+            this.cUpdateWidgetInstance(e.wInstanceID, e.cwInstanceID, e.settingName, e.settingValue);
+        }
         else if (e instanceof FoxyApp.Class.Event.Model.Template.Delete)
+        {
+            this.deleteWidgetInstance(e.wInstanceID);
+        }
+        else if (e instanceof FoxyApp.Class.Event.Model.ComponentWidgetInstance.Insert)
+        {
+            this.insertCWidgetInstance(e.widgetInstance, e.componentID, e.targetID, e.insertBefore);
+        }
+        else if (e instanceof FoxyApp.Class.Event.Model.ComponentWidgetInstance.Update)
+        {
+            this.updateWidgetInstance(e.wInstanceID, e.settingName, e.settingValue);
+        }
+        else if (e instanceof FoxyApp.Class.Event.Model.ComponentWidgetInstance.Delete)
         {
             this.deleteWidgetInstance(e.wInstanceID);
         }
@@ -3149,7 +5375,7 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
         }
         else if (e instanceof FoxyApp.Class.Event.Model.Selection)
         {
-            this.selectWidgetInstance(e.wInstanceID);
+            this.selectWidgetInstance(e.wInstanceID, e.cwInstanceID);
         }
         else if (e instanceof FoxyApp.Class.Event.Model.Device)
         {
@@ -3163,22 +5389,28 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
         {
             if (e.sourceElement.classList.contains('foxybdr-widget-card'))
             {
+                let widgetName = e.sourceElement.getAttribute('foxybdr-widget-name');
+                let componentIDStr = e.sourceElement.getAttribute('foxybdr-component-id');
+                let widgetType = widgetName !== null ? 0 : 1;
+                let widgetID = widgetType === 0 ? widgetName : Number(componentIDStr);
+
                 let wInstanceID = FoxyApp.Function.generateWidgetInstanceID('T', FoxyApp.templateID);
-                let widgetID = e.sourceElement.getAttribute('foxybdr-widget-name');
 
                 let wInstanceData = {
                     id: wInstanceID,
-                    widgetType: 0,
+                    widgetType: widgetType,
                     widgetID: widgetID,
                     sparseSettings: {}
                 };
+                if (widgetType === 1)
+                    wInstanceData.componentSettings = {};
 
                 let targetID = e.targetElement === this.#templateElement ? null : e.targetElement.closest('.foxybdr-widget').getAttribute('foxybdr-instance-id');
 
                 let command = new FoxyApp.Class.Command.Model.Template.Insert(wInstanceData, targetID, e.insertBefore);
                 FoxyApp.Manager.modelManager.submitCommand(null, command);
 
-                command = new FoxyApp.Class.Command.Model.Selection(wInstanceID);
+                command = new FoxyApp.Class.Command.Model.Selection(wInstanceID, null);
                 FoxyApp.Manager.modelManager.submitCommand(null, command);
             }
         }
@@ -3199,7 +5431,16 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
                 this.#lastSelectionClick.widgetElement = widgetElement;
 
                 let wInstanceID = widgetElement.getAttribute('foxybdr-instance-id');
-                let command = new FoxyApp.Class.Command.Model.Selection(wInstanceID === FoxyApp.Model.selection.wInstanceID ? null : wInstanceID);
+                let cwInstanceID = null;
+
+                if (wInstanceID.startsWith('C-'))
+                {
+                    cwInstanceID = wInstanceID;
+                    wInstanceID = widgetElement.closest('.foxybdr-widget[foxybdr-widget-type="foxybdr.layout.component"]').getAttribute('foxybdr-instance-id');
+                }
+
+                let same = FoxyApp.Model.selection.wInstanceID === wInstanceID && FoxyApp.Model.selection.cwInstanceID === cwInstanceID;
+                let command = new FoxyApp.Class.Command.Model.Selection(same ? null : wInstanceID, same ? null : cwInstanceID);
                 FoxyApp.Manager.modelManager.submitCommand(null, command);
             }
         }
@@ -3213,45 +5454,20 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
             {
                 e.preventDefault();
 
-                FoxyApp.Manager.modelManager.undo(1);
+                FoxyApp.Manager.modelManager.undo();
             }
             else if ((e.key === 'y' || e.key === 'Y') && e.ctrlKey === true)
             {
                 e.preventDefault();
 
-                FoxyApp.Manager.modelManager.redo(1);
+                FoxyApp.Manager.modelManager.redo();
             }
-        }
-
-        /* BEGIN - CONTEXT MENU RELATED EVENTS */
-
-        else if (e.type === 'contextmenu' && e.currentTarget === this.#templateElement && !e.ctrlKey)
-        {
-            e.preventDefault();
-        }
-        else if (e.type === 'mouseup' && e.button === 2 && e.currentTarget === this.#templateElement && !e.ctrlKey)
-        {
-            let widgetElement = e.target.closest('.foxybdr-widget');
-
-            if (widgetElement !== null)
-            {
-                this.#contextMenu.show(widgetElement, e.clientX, e.clientY);
-
-                // prevent hiding of context menu
-                e.stopPropagation();
-            }
-        }
-        else if ((e.type === 'mouseup' || (e.type === 'keyup' && e.key === 'Escape')) && (e.currentTarget === this.#iFrameElement.contentWindow || e.currentTarget === window))
-        {
-            this.#contextMenu.hide();
         }
         else if (e.type === 'context-menu-command')
         {
-            this.#onContextMenuCommand(e.command, e.wInstanceID);
+            let wInstanceID = e.itemElement.getAttribute('foxybdr-instance-id');
+            this.#onContextMenuCommand(e.command, wInstanceID, e.itemElement);
         }
-
-        /* END - CONTEXT MENU RELATED EVENTS */
-
         else if (e.type === 'background-thread-response')
         {
             if (e.request.type === 'find-google-fonts')
@@ -3273,13 +5489,21 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
         }
     }
 
-    #onContextMenuCommand(contextMenuCommand, wInstanceID)
+    #onContextMenuCommand(contextMenuCommand, wInstanceID, itemElement)
     {
         switch (contextMenuCommand)
         {
             case 'edit':
                 {
-                    let command = new FoxyApp.Class.Command.Model.Selection(wInstanceID);
+                    let cwInstanceID = null;
+
+                    if (wInstanceID.startsWith('C-'))
+                    {
+                        cwInstanceID = wInstanceID;
+                        wInstanceID = itemElement.closest('.foxybdr-widget[foxybdr-widget-type="foxybdr.layout.component"]').getAttribute('foxybdr-instance-id');
+                    }
+
+                    let command = new FoxyApp.Class.Command.Model.Selection(wInstanceID, cwInstanceID);
                     FoxyApp.Manager.modelManager.submitCommand(null, command);
                 }
                 break;
@@ -3312,6 +5536,24 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
             case 'paste':
                 {
 
+                }
+                break;
+
+            case 'create-component':
+                {
+                    let _this = this;
+
+                    (new FoxyBuilder.Dialogs.Prompt({
+                        title: 'Create Component',
+                        message: 'Name:',
+                        inputValue: 'My Component',
+                        cancelLabel: 'Cancel',
+                        okLabel: 'Create',
+                        onCancel: null,
+                        onOK: function(inputStr) {
+                            _this.createComponent(wInstanceID, inputStr);
+                        }
+                    })).create();
                 }
                 break;
         }
@@ -3404,7 +5646,7 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
         let widgetInstanceList = {};
         this.#buildWidgetInstanceList(widgetInstanceList);
 
-        FoxyApp.backgroundThread.submitRequest_widgetInstances(widgetInstanceList)
+        FoxyApp.backgroundThread.submitRequest_widgetInstances(widgetInstanceList);
 
         if (insertBefore === null)
         {
@@ -3439,8 +5681,7 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
                         {
                             /* The parent node does not have a query loop. There is only one copy of the new node needed. Just append the new node to the parent
                             * node, and copy the parent node's context to the new node. */
-                            let context = parentNode.isComponent() ? parentNode.generateComponentContext() : parentNode.context;
-                            let canvasNode = new FoxyApp.Class.View.Canvas_Node(widgetInstance.data.id, context, this.#canvasNodeMap);
+                            let canvasNode = new FoxyApp.Class.View.Canvas_Node(widgetInstance.data.id, parentNode.descendantContext, this.#canvasNodeMap);
                             canvasNode.render(true);
             
                             parentNode.appendChild(canvasNode);
@@ -3482,8 +5723,7 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
                     {
                         /* The parent node does not have a query loop. There is only one copy of the new node needed. Just insert the new node to the parent
                         * node, and copy the parent node's context to the new node. */
-                        let context = parentNode.isComponent() ? parentNode.generateComponentContext() : parentNode.context;
-                        let canvasNode = new FoxyApp.Class.View.Canvas_Node(widgetInstance.data.id, context, this.#canvasNodeMap);
+                        let canvasNode = new FoxyApp.Class.View.Canvas_Node(widgetInstance.data.id, parentNode.descendantContext, this.#canvasNodeMap);
                         canvasNode.render(true);
 
                         parentNode.insertBefore(canvasNode, insertBefore ? targetNode : targetNode.nextSibling);
@@ -3497,42 +5737,67 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
         FoxyApp.backgroundThread.submitRequest_findGoogleFonts(this);
     }
 
+    insertCWidgetInstance(widgetInstance, componentID, targetID, insertBefore)
+    {
+        let widgetInstanceList = {};
+        this.#buildWidgetInstanceList(widgetInstanceList);
+
+        FoxyApp.backgroundThread.submitRequest_widgetInstances(widgetInstanceList);
+
+        for (let wInstanceID in this.#canvasNodeMap)
+        {
+            let wi = FoxyApp.Model.widgetInstanceMap[wInstanceID];
+
+            if (wi.data.widgetType === 1 && wi.data.widgetID === componentID)
+            {
+                let nodes = this.#canvasNodeMap[wInstanceID];
+
+                for (let node of nodes)
+                    node.render(true);
+            }
+        }
+
+        this.#stylesheet.build(widgetInstanceList);
+
+        FoxyApp.backgroundThread.submitRequest_findGoogleFonts(this);
+    }
+
     updateWidgetInstance(wInstanceID, settingName, settingValue)
     {
         FoxyApp.backgroundThread.submitRequest_updateWidgetInstance(wInstanceID, settingName, settingValue);
 
         let widgetInstance = FoxyApp.Model.widgetInstanceMap[wInstanceID];
+        let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetType === 0 ? widgetInstance.data.widgetID : 'foxybdr.layout.component'];
+        let settingParams = widget.settings[settingName];
+        let cssChanged = settingParams.selector !== undefined || settingParams.selectors !== undefined || settingParams.render_type === 'ui';
 
-        switch (widgetInstance.data.widgetType)
+        if (cssChanged === false)
         {
-            case 0:  // widget
-                {
-                    let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetID];
-                    let settingParams = widget.settings[settingName];
-                    let cssChanged = settingParams.selector !== undefined || settingParams.selectors !== undefined || settingParams.render_type === 'ui';
+            let canvasNodes = this.#canvasNodeMap[wInstanceID];
 
-                    if (cssChanged === false)
-                    {
-                        let canvasNodes = this.#canvasNodeMap[wInstanceID];
+            if (canvasNodes !== undefined)
+            {
+                for (let canvasNode of canvasNodes)
+                    canvasNode.render(false);
+            }
+        }
 
-                        if (canvasNodes !== undefined)
-                        {
-                            for (let canvasNode of canvasNodes)
-                                canvasNode.render(false);
-                        }
-                    }
+        if (cssChanged === true || widget.cssDependencies[settingName] === true)
+        {
+            this.#stylesheet.update(wInstanceID);
+        }
 
-                    if (cssChanged === true || widget.cssDependencies[settingName] === true)
-                    {
-                        this.#stylesheet.update(wInstanceID);
-                    }
+        FoxyApp.backgroundThread.submitRequest_findGoogleFonts(this);
+    }
 
-                    FoxyApp.backgroundThread.submitRequest_findGoogleFonts(this);
-                }
-                break;
+    cUpdateWidgetInstance(wInstanceID, cwInstanceID, settingName, settingValue)
+    {
+        let canvasNodes = this.#canvasNodeMap[wInstanceID];
 
-            case 1:  // component
-                break;
+        if (canvasNodes !== undefined)
+        {
+            for (let canvasNode of canvasNodes)
+                canvasNode.onComponentDescendantUpdate(cwInstanceID, settingName, settingValue);
         }
     }
 
@@ -3598,7 +5863,7 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
         }
     }
 
-    selectWidgetInstance(wInstanceID)
+    selectWidgetInstance(wInstanceID, cwInstanceID)
     {
         for (let id in this.#canvasNodeMap)
         {
@@ -3612,16 +5877,62 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
 
         if (wInstanceID !== null)
         {
-            let nodes = this.#canvasNodeMap[wInstanceID];
-
-            if (nodes !== undefined)
+            if (wInstanceID !== null && cwInstanceID !== null && wInstanceID.startsWith('T-') && cwInstanceID.startsWith('C-'))
             {
-                for (let node of nodes)
+                let nodes = this.#canvasNodeMap[cwInstanceID];
+
+                if (nodes !== undefined)
                 {
-                    node.element.classList.add('foxybdr-selected');
+                    for (let node of nodes)
+                    {
+                        if (node.element.matches(`.foxybdr-widget[foxybdr-instance-id="${wInstanceID}"] .foxybdr-widget`))
+                            node.element.classList.add('foxybdr-selected');
+                    }
+                }
+            }
+            else if (wInstanceID !== null && cwInstanceID === null && wInstanceID.startsWith('T-'))
+            {
+                let nodes = this.#canvasNodeMap[wInstanceID];
+
+                if (nodes !== undefined)
+                {
+                    for (let node of nodes)
+                    {
+                        node.element.classList.add('foxybdr-selected');
+                    }
                 }
             }
         }
+    }
+
+    createComponent(wInstanceID, title)
+    {
+        let widgetInstance = FoxyApp.Model.widgetInstanceMap[wInstanceID];
+
+        // Widget instance must not be part of an existing component.
+        if (wInstanceID.split('-')[0] !== 'T')
+            return;
+
+        if (widgetInstance.data.widgetType === 0 && [ 'foxybdr.layout.section', 'foxybdr.layout.column' ].includes(widgetInstance.data.widgetID))
+            return;
+
+        if (widgetInstance.data.widgetType !== 0)
+            return;
+
+        let componentID = FoxyApp.Function.generateComponentID();
+
+        let wInstanceData = widgetInstance.saveTree();
+        FoxyApp.Class.Model.WidgetInstance.dropComponents(wInstanceData);
+        FoxyApp.Class.Model.WidgetInstance.generateNewIDs(wInstanceData, 'C', componentID);
+
+        let componentData = {
+            id: componentID,
+            title: title,
+            children: [ wInstanceData ]
+        }
+
+        let command = new FoxyApp.Class.Command.Model.Component.Insert(componentData, null, null);
+        FoxyApp.Manager.modelManager.submitCommand(null, command);
     }
 
     #resizeIFrame()
@@ -3663,7 +5974,12 @@ FoxyApp.Class.View.Canvas = class extends FoxyApp.Class.UI.Component.BaseCompone
 
             if (node.data.widgetType === 1)  // component
             {
-                // TODO: Get component, then get its widget instance tree, then recursively call this method for each widget instance in the tree.
+                let component = FoxyApp.Model.componentMap[node.data.widgetID];
+
+                for (let widgetInstance of component.children)
+                {
+                    this.#_buildWidgetInstanceList(widgetInstance, list);
+                }
             }
         }
 
@@ -3738,6 +6054,7 @@ FoxyApp.Class.View.Canvas_Node = class extends FoxyApp.Class.ElementNode
 {
     wInstanceID = '';
     context = null;
+    descendantContext = null;
     #nodeMap = null;
 
     constructor(wInstanceID, context, nodeMap)
@@ -3752,6 +6069,20 @@ FoxyApp.Class.View.Canvas_Node = class extends FoxyApp.Class.ElementNode
             this.#nodeMap[this.wInstanceID] = [];
 
         this.#nodeMap[this.wInstanceID].push(this);
+
+        let widgetInstance = FoxyApp.Model.widgetInstanceMap[this.wInstanceID];
+        switch (widgetInstance.data.widgetType)
+        {
+            case 0:
+                this.descendantContext = this.context;
+                break;
+
+            case 1:
+                this.descendantContext = {
+                    component: structuredClone(widgetInstance.data.componentSettings)
+                };
+                break;
+        }
     }
 
     render(deep)
@@ -3759,15 +6090,24 @@ FoxyApp.Class.View.Canvas_Node = class extends FoxyApp.Class.ElementNode
         FoxyApp.backgroundThread.submitRequest_render(this, this.wInstanceID, this.context, deep);
     }
 
+    renderDescendant(wInstanceID)
+    {
+        if (wInstanceID === this.wInstanceID)
+            this.render(false);
+
+        for (let node of this.children)
+            node.renderDescendant(wInstanceID);
+    }
+
     #doRender(deep, renderHTML)
     {
         let widgetInstance = FoxyApp.Model.widgetInstanceMap[this.wInstanceID];
-
+        let widgetType = widgetInstance.data.widgetType;
         let widgetID = widgetInstance.data.widgetID;
 
         let wInstanceElement = document.createElement('div');
         wInstanceElement.classList.add('foxybdr-widget');
-        wInstanceElement.setAttribute('foxybdr-widget-type', widgetID);
+        wInstanceElement.setAttribute('foxybdr-widget-type', widgetType === 0 ? widgetID : 'foxybdr.layout.component');
         wInstanceElement.setAttribute('foxybdr-instance-id', this.wInstanceID);
 
         if (this.element && this.element.classList.contains('foxybdr-selected'))
@@ -3781,7 +6121,7 @@ FoxyApp.Class.View.Canvas_Node = class extends FoxyApp.Class.ElementNode
         wInstanceElement.appendChild(widgetContainerElement);
 
         let isContainer;
-        switch (widgetInstance.data.widgetType)
+        switch (widgetType)
         {
             case 0:
                 isContainer = FoxyApp.Model.widgets[widgetID].container;
@@ -3806,7 +6146,7 @@ FoxyApp.Class.View.Canvas_Node = class extends FoxyApp.Class.ElementNode
         {
             let newChildNodes = [];
 
-            switch (widgetInstance.data.widgetType)
+            switch (widgetType)
             {
                 case 0:  // widget
                     {
@@ -3831,7 +6171,7 @@ FoxyApp.Class.View.Canvas_Node = class extends FoxyApp.Class.ElementNode
                         {
                             for (let childWidgetInstance of widgetInstance.children)
                             {
-                                let newChildNode = new FoxyApp.Class.View.Canvas_Node(childWidgetInstance.data.id, this.context, this.#nodeMap);
+                                let newChildNode = new FoxyApp.Class.View.Canvas_Node(childWidgetInstance.data.id, this.descendantContext, this.#nodeMap);
                                 newChildNode.render(deep);
                                 newChildNodes.push(newChildNode);
                             }
@@ -3841,14 +6181,11 @@ FoxyApp.Class.View.Canvas_Node = class extends FoxyApp.Class.ElementNode
 
                 case 1:  // component
                     {
-                        let childContext = this.generateComponentContext();
+                        let component = FoxyApp.Model.componentMap[widgetID];
 
-                        // TODO: Get component's list of immediate children
-                        let childWidgetInstances = [];
-
-                        for (let childWidgetInstance of childWidgetInstances)
+                        for (let childWidgetInstance of component.children)
                         {
-                            let newChildNode = new FoxyApp.Class.View.Canvas_Node(childWidgetInstance.data.id, childContext, this.#nodeMap);
+                            let newChildNode = new FoxyApp.Class.View.Canvas_Node(childWidgetInstance.data.id, this.descendantContext, this.#nodeMap);
                             newChildNode.render(deep);
                             newChildNodes.push(newChildNode);
                         }
@@ -3890,6 +6227,29 @@ FoxyApp.Class.View.Canvas_Node = class extends FoxyApp.Class.ElementNode
         }
     }
 
+    onComponentDescendantUpdate(cwInstanceID, settingName, settingValue)
+    {
+        let componentSettings = this.descendantContext.component;
+
+        if (settingValue !== null)
+        {
+            if (componentSettings[cwInstanceID] === undefined)
+                componentSettings[cwInstanceID] = {};
+
+            componentSettings[cwInstanceID][settingName] = settingValue;
+        }
+        else if (componentSettings[cwInstanceID] !== undefined)
+        {
+            if (componentSettings[cwInstanceID][settingName] !== undefined)
+                delete componentSettings[cwInstanceID][settingName];
+
+            if (Object.keys(componentSettings[cwInstanceID]).length === 0)
+                delete componentSettings[cwInstanceID];
+        }
+
+        this.renderDescendant(cwInstanceID);
+    }
+
     hasQuery()
     {
         return false;
@@ -3898,16 +6258,6 @@ FoxyApp.Class.View.Canvas_Node = class extends FoxyApp.Class.ElementNode
     runQuery()
     {
         return [];
-    }
-
-    isComponent()
-    {
-        return false;
-    }
-
-    generateComponentContext()
-    {
-        return this.context;
     }
 
     destroy()
@@ -3953,9 +6303,6 @@ FoxyApp.Class.View.Canvas_Stylesheet = class extends FoxyApp.Class.UI.Component.
         // What needs to be added to this.#stylesheet?
         for (let wInstanceID in widgetInstances)
         {
-            if (widgetInstances[wInstanceID].data.widgetType !== 0)
-                continue;
-
             if (this.#stylesheet[wInstanceID] !== undefined)
                 continue;
 
@@ -4002,11 +6349,6 @@ FoxyApp.Class.View.Canvas_Stylesheet = class extends FoxyApp.Class.UI.Component.
     update(wInstanceID)
     {
         if (this.#stylesheet[wInstanceID] === undefined)
-            return;
-
-        let widgetInstance = FoxyApp.Model.widgetInstanceMap[wInstanceID];
-
-        if (widgetInstance.data.widgetType !== 0)
             return;
 
         FoxyApp.backgroundThread.submitRequest_buildStylesheet(this, wInstanceID);
@@ -4087,131 +6429,49 @@ FoxyApp.Class.View.Canvas_Stylesheet = class extends FoxyApp.Class.UI.Component.
     }
 };
 
-FoxyApp.Class.View.Canvas_ContextMenu = class extends FoxyApp.Class.UI.Component.BaseComponent
+FoxyApp.Class.View.Canvas_ContextMenu = class extends FoxyApp.Class.UI.Component.ContextMenu
 {
-    #menuElement = null;
-    #widgetElement = null;
-
     constructor()
     {
         super();
     }
 
-    create(bodyElement)
+    addMenuItems(itemElement)
     {
-        this.#menuElement = document.createElement('div');
-        this.#menuElement.classList.add('foxybdr-context-menu');
+        let wInstanceID = itemElement.getAttribute('foxybdr-instance-id');
+        let widgetInstance = FoxyApp.Model.widgetInstanceMap[wInstanceID];
+        let widgetType = widgetInstance.data.widgetType;
 
-        bodyElement.appendChild(this.#menuElement);
-
-        this.registerEvent(this.#menuElement, 'mouseup');
-    }
-
-    show(widgetElement, mouseX, mouseY)
-    {
-        if (this.#widgetElement)
-        {
-            this.#widgetElement.classList.remove('foxybdr-context-menu-hover');
-        }
-
-        this.#widgetElement = widgetElement;
-        this.#widgetElement.classList.add('foxybdr-context-menu-hover');
-
-        this.#menuElement.classList.add('foxybdr-show');
-        this.#menuElement.style.left = String(mouseX) + 'px';
-        this.#menuElement.style.top  = String(mouseY) + 'px';
-
-        this.#clearMenuItems();
-        this.#addMenuItems();
-    }
-
-    hide()
-    {
-        if (this.#widgetElement === null)
-            return;
-
-        this.#widgetElement.classList.remove('foxybdr-context-menu-hover');
-
-        this.#widgetElement = null;
-
-        this.#menuElement.classList.remove('foxybdr-show');
-        this.#menuElement.style.left = '';
-        this.#menuElement.style.top  = '';
-
-        this.#clearMenuItems();
-    }
-
-    handleEvent(e)
-    {
-        if (e.type === 'mouseup' && e.button === 0 && e.currentTarget === this.#menuElement && this.#widgetElement !== null)
-        {
-            let menuItemElement = e.target.closest('.foxybdr-context-menu-item');
-
-            if (menuItemElement)
-            {
-                let command = menuItemElement.getAttribute('foxybdr-command');
-                let wInstanceID = this.#widgetElement.getAttribute('foxybdr-instance-id');
-
-                this.sendEvent({
-                    type: 'context-menu-command',
-                    command: command,
-                    wInstanceID: wInstanceID
-                });
-            }
-        }
-    }
-
-    #addMenuItems()
-    {
         let isSection = false;
         let isColumn = false;
         let isBlock = false;
 
-        let wInstanceID = this.#widgetElement.getAttribute('foxybdr-instance-id');
-        let widgetInstance = FoxyApp.Model.widgetInstanceMap[wInstanceID];
-
-        if (widgetInstance.data.widgetType === 0)  // widget
+        if (widgetType === 0)  // widget
         {
             isSection = widgetInstance.data.widgetID === 'foxybdr.layout.section';
             isColumn = widgetInstance.data.widgetID === 'foxybdr.layout.column';
             isBlock = widgetInstance.data.widgetID === 'foxybdr.layout.block';
         }
 
-        this.#addMenuItem('edit', 'Edit');
-        this.#addMenuItem('delete', 'Delete');
-        this.#addMenuItem('copy', 'Copy');
-        this.#addMenuItem('cut', 'Cut');
-        this.#addMenuItem('paste', 'Paste');
-    }
+        let isTemplate = wInstanceID.split('-')[0] === 'T';
 
-    #addMenuItem(command, label)
-    {
-        let itemElement = document.createElement('div');
-        itemElement.classList.add('foxybdr-context-menu-item');
-        itemElement.setAttribute('foxybdr-command', command);
-        this.#menuElement.appendChild(itemElement);
+        this.addMenuItem('edit', 'Edit');
 
-        let labelElement = document.createElement('span');
-        labelElement.innerText = label;
-        itemElement.appendChild(labelElement);
-    }
+        if (isTemplate)
+        {
+            this.addMenuItem('delete', 'Delete');
+            this.addMenuItem('copy', 'Copy');
+            this.addMenuItem('cut', 'Cut');
+            this.addMenuItem('paste', 'Paste');
+        }
 
-    #clearMenuItems()
-    {
-        this.#menuElement.innerHTML = '';
+        if (!isSection && !isColumn && isTemplate && widgetType === 0)
+            this.addMenuItem('create-component', 'Create Component...');
     }
 
     destroy()
     {
         super.destroy();
-
-        if (this.#menuElement)
-        {
-            this.#menuElement.remove();
-            this.#menuElement = null;
-        }
-
-        this.#widgetElement = null;
     }
 };
 
@@ -4301,6 +6561,7 @@ FoxyApp.Class.View.Save = class extends FoxyApp.Class.UI.Component.BaseComponent
 
     #saveState = {
         siteSettings: '',
+        components: '',
         template: ''
     };
 
@@ -4314,9 +6575,12 @@ FoxyApp.Class.View.Save = class extends FoxyApp.Class.UI.Component.BaseComponent
     create()
     {
         this.#saveButtonElement = document.querySelector('#foxybdr-save-button');
+        this.#saveButtonElement.disabled = true;
+        this.#saveButtonElement.classList.remove('foxybdr-enabled');
         this.registerEvent(this.#saveButtonElement, 'click');
 
         this.#saveState.siteSettings = this.#stringifySiteSettings();
+        this.#saveState.components = this.#stringifyComponents();
         this.#saveState.template = this.#stringifyTemplate();
     }
 
@@ -4359,6 +6623,10 @@ FoxyApp.Class.View.Save = class extends FoxyApp.Class.UI.Component.BaseComponent
         if (siteSettingsStr !== this.#saveState.siteSettings)
             request['site_settings'] = siteSettingsStr;
 
+        let componentsStr = this.#stringifyComponents();
+        if (componentsStr !== this.#saveState.components)
+            request['components'] = componentsStr;
+
         let templateStr = this.#stringifyTemplate();
         if (templateStr !== this.#saveState.template)
             request['template'] = templateStr;
@@ -4399,6 +6667,7 @@ FoxyApp.Class.View.Save = class extends FoxyApp.Class.UI.Component.BaseComponent
     onSaveComplete()
     {
         this.#saveState.siteSettings = this.#stringifySiteSettings();
+        this.#saveState.components = this.#stringifyComponents();
         this.#saveState.template = this.#stringifyTemplate();
 
         let undoStack = FoxyApp.Manager.modelManager.undoStack;
@@ -4408,7 +6677,8 @@ FoxyApp.Class.View.Save = class extends FoxyApp.Class.UI.Component.BaseComponent
             undoStack.push({
                 redoCommand: null,
                 undoCommand: null,
-                wInstanceID: null
+                wInstanceID: null,
+                componentID: null
             });
         }
 
@@ -4423,6 +6693,19 @@ FoxyApp.Class.View.Save = class extends FoxyApp.Class.UI.Component.BaseComponent
         let data = FoxyApp.Model.Settings.siteSettings.saveTree();
 
         return JSON.stringify(data);
+    }
+
+    #stringifyComponents()
+    {
+        let dataArr = [];
+
+        for (let component of FoxyApp.Model.componentTree.children)
+        {
+            let data = component.saveTree();
+            dataArr.push(data);
+        }
+
+        return JSON.stringify(dataArr);
     }
 
     #stringifyTemplate()
@@ -5266,11 +7549,14 @@ FoxyApp.Model.widgetInstanceMap = {};  // Key: Widget instance ID. Value: Pointe
 FoxyApp.Model.widgetInstanceTree = null;
 FoxyApp.Model.widgetCategories = null;
 FoxyApp.Model.widgets = null;
+FoxyApp.Model.componentMap = {};
+FoxyApp.Model.componentTree = null;
 FoxyApp.Model.Settings = {};
 FoxyApp.Model.Settings.siteSettings = null;
 FoxyApp.Model.Settings.templateSettings = null;
 FoxyApp.Model.selection = {
-    wInstanceID: null
+    wInstanceID: null,
+    cwInstanceID: null
 };
 FoxyApp.Model.device = {
     deviceMode: ''  // 'desktop', 'tablet', 'mobile'
@@ -5279,12 +7565,16 @@ FoxyApp.Model.device = {
 FoxyApp.Manager = {};
 FoxyApp.Manager.modelManager = null;
 FoxyApp.Manager.panelManager = null;
+FoxyApp.Manager.drawerManager = null;
 
 FoxyApp.View = {};
 FoxyApp.View.PanelModule = {};
 FoxyApp.View.PanelModule.siteSettingsModule = null;
 FoxyApp.View.PanelModule.propertiesModule = null;
 FoxyApp.View.PanelModule.widgetsModule = null;
+FoxyApp.View.DrawerModule = {};
+FoxyApp.View.DrawerModule.template = null;
+FoxyApp.View.DrawerModule.components = null;
 FoxyApp.View.canvas = null;
 FoxyApp.View.device = null;
 FoxyApp.View.save = null;
@@ -5332,12 +7622,22 @@ FoxyApp.Main = class
         FoxyApp.Model.widgets = FOXYAPP.widgets;
         this.#buildWidgetCssDependencies();
 
+        FoxyApp.Model.componentTree = new FoxyApp.Class.Node();
+        for (let data of FOXYAPP.components)
+        {
+            let component = FoxyApp.Class.Model.Component.loadTree(structuredClone(data));
+            FoxyApp.Model.componentTree.appendChild(component);
+        }
+
         FoxyApp.Model.Settings.siteSettings = new FoxyApp.Class.Model.WidgetInstance(FOXYAPP.siteSettings);
         FoxyApp.Model.Settings.templateSettings;
         FoxyApp.Model.device.deviceMode = 'desktop';
 
         FoxyApp.Manager.modelManager = new FoxyApp.Class.Manager.ModelManager();
         FoxyApp.Manager.panelManager = new FoxyApp.Class.Manager.PanelManager();
+
+        FoxyApp.Manager.drawerManager = new FoxyApp.Class.Manager.DrawerManager();
+        FoxyApp.Manager.drawerManager.create();
 
         FoxyApp.View.PanelModule.siteSettingsModule = new FoxyApp.Class.View.PanelModule.SiteSettingsModule();
         FoxyApp.View.PanelModule.siteSettingsModule.create();
@@ -5347,6 +7647,12 @@ FoxyApp.Main = class
 
         FoxyApp.View.PanelModule.widgetsModule = new FoxyApp.Class.View.PanelModule.WidgetsModule();
         FoxyApp.View.PanelModule.widgetsModule.create();
+
+        FoxyApp.View.DrawerModule.template = new FoxyApp.Class.View.DrawerModule.Template();
+        FoxyApp.View.DrawerModule.template.create();
+
+        FoxyApp.View.DrawerModule.components = new FoxyApp.Class.View.DrawerModule.Components();
+        FoxyApp.View.DrawerModule.components.create();
 
         FoxyApp.View.canvas = new FoxyApp.Class.View.Canvas();
         FoxyApp.View.canvas.create();
@@ -5370,13 +7676,13 @@ FoxyApp.Main = class
             {
                 e.preventDefault();
 
-                FoxyApp.Manager.modelManager.undo(1);
+                FoxyApp.Manager.modelManager.undo();
             }
             else if ((e.key === 'y' || e.key === 'Y') && e.ctrlKey === true)
             {
                 e.preventDefault();
 
-                FoxyApp.Manager.modelManager.redo(1);
+                FoxyApp.Manager.modelManager.redo();
             }
         }
     }

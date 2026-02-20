@@ -99,6 +99,19 @@ body {
         gap: var(--foxybdr-widget-spacing, 0px);
     }
 
+[foxybdr-widget-type="foxybdr.layout.component"] {
+    display: flex;
+    width: var(--foxybdr-block-width, 100%);
+}
+
+    [foxybdr-widget-type="foxybdr.layout.component"] > .foxybdr-widget-container {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        align-content: flex-start;
+        gap: var(--foxybdr-widget-spacing, 0px);
+    }
+
 /* For front-end @media style rules, see (1) "foxybdr.settings.site" widget in site.php under "Breakpoints" tab section, (2) site-init.json file. */
 
 [foxybdr-widget-type="foxybdr.basic.heading"] .foxybdr-title > a {

@@ -94,14 +94,14 @@ body.foxybdr-wait.foxybdr-wait.foxybdr-wait.foxybdr-wait.foxybdr-wait * {
 
         .foxybdr-dialog-header {
             border-bottom: 1px solid var(--foxybdr-dlg-header-line-color);
-            padding: 20px 20px 10px 20px;
+            padding: 20px 20px 20px 20px;
             font-size: 15px;
             font-weight: bold;
             text-align: left;
         }
 
         .foxybdr-dialog-message {
-            padding: 10px 20px 10px 20px;
+            padding: 20px 20px 10px 20px;
             font-size: 13px;
             text-align: left;
             line-height: 1.5em;
@@ -136,7 +136,33 @@ body.foxybdr-wait.foxybdr-wait.foxybdr-wait.foxybdr-wait.foxybdr-wait * {
                 background-color: var(--foxybdr-dlg-button1-bg-color);
                 color: var(--foxybdr-dlg-button1-t-color);
             }
-            .foxybdr-dialog-ok:hover {
+            .foxybdr-dialog-ok:not(.foxybdr-disabled):hover {
                 background-color: var(--foxybdr-dlg-button1-bg-color-h);
             }
+            .foxybdr-dialog-ok.foxybdr-disabled {
+                opacity: 0.2;
+                cursor: default;
+            }
+
+.foxybdr-dialog-prompt {
+}
+
+    .foxybdr-dialog-prompt .foxybdr-dialog-message {
+        padding-bottom: 0px;
+    }
+
+    .foxybdr-dialog-prompt .foxybdr-dialog-input {
+        padding: 0px 20px 10px 20px;
+    }
+
+        .foxybdr-dialog-prompt .foxybdr-dialog-input > input {
+            width: 100%;
+            border: 1px solid var(--foxybdr-dlg-input-br-color);
+            border-radius: 4px;
+            padding: 8px;
+            background-color: var(--foxybdr-dlg-input-bg-color);
+            color: var(--foxybdr-dlg-input-t-color);
+            font-size: 12px;
+            line-height: 1.0;
+        }
 

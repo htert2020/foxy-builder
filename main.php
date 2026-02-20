@@ -93,6 +93,13 @@ class Main
 
             update_option('foxybdr_site_settings', $optStr);
         }
+
+        $optStr = get_option('foxybdr_components');
+
+        if ($optStr === false)
+        {
+            update_option('foxybdr_components', '[]');
+        }
     }
 
     public function plugin_deactivate()

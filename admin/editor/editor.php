@@ -11,6 +11,7 @@ require_once FOXYBUILDER_PLUGIN_PATH . '/modules/group-control-manager.php';
 require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widget-manager.php';
 require_once FOXYBUILDER_PLUGIN_PATH . '/modules/asset-manager.php';
 require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widget-instance-sanitizer.php';
+require_once FOXYBUILDER_PLUGIN_PATH . '/modules/component-sanitizer.php';
 
 class Editor
 {
@@ -151,6 +152,11 @@ class Editor
                     'message' => __('There was an error while attempting to save.', 'foxy-builder'),
                     'okLabel' => __('OK', 'foxy-builder'),
                 ],
+                'componentDep' => [
+                    'title' => __('Error', 'foxy-builder'),
+                    'message' => __('This item cannot be deleted because something else is referencing it.', 'foxy-builder'),
+                    'okLabel' => __('OK', 'foxy-builder'),
+                ],
             ],
         ]);
 
@@ -195,11 +201,51 @@ class Editor
 
         require FOXYBUILDER_PLUGIN_PATH . '/admin/assets/html/admin.php';
 
-        $optStr = get_option('foxybdr_site_settings');
-        $site_settings = json_decode($optStr, true);
-
         $optStr = get_option('foxybdr_upload_file_types');
         $uploadFileTypes = $optStr !== false ? explode('|', $optStr) : [];
+
+        $site_settings_str = get_option('foxybdr_site_settings');
+
+        $optStr = get_option('foxybdr_components');
+        $components = json_decode($optStr, true);
+
+        $jsonStr = $document->widget_instances();
+        $widget_instances = json_decode($jsonStr, true);
+
+        /* Sanitize components and widget instances. This is needed to address the possibility that widgets, components, and
+         * widget instances may have been deleted from the system, which could lead to broken references. These sanitization
+         * functions clean up broken references. This is especially important right before loading the data into the Editor.
+         */
+        {
+            $widget_instance_sanitizer = new \FoxyBuilder\Modules\WidgetInstanceSanitizer($this->group_controls, $this->widgets);
+            $component_sanitizer = new \FoxyBuilder\Modules\ComponentSanitizer($widget_instance_sanitizer);
+
+            $c_arr = [];
+            $components_arr = [];
+            foreach ($components as $c)
+            {
+                $sc = $component_sanitizer->sanitize($c);
+
+                if ($sc !== null)
+                {
+                    $c_arr[] = $component_sanitizer->json_encode($sc);
+                    $components_arr[] = $sc;
+                }
+            }
+            $components_str = '[' . implode(',', $c_arr) . ']';
+
+            $widget_instance_sanitizer->setComponents($components_arr);
+
+            $w_arr = [];
+            foreach ($widget_instances as $w)
+            {
+                $sw = $widget_instance_sanitizer->sanitize($w);
+                
+                if ($sw !== null)
+                    $w_arr[] = $widget_instance_sanitizer->json_encode($sw);
+            }
+            $widget_instances_str = '[' . implode(',', $w_arr) . ']';
+        }
 
         ?>
 
@@ -211,7 +257,8 @@ class Editor
                 'templateID' => $post_id,
                 'widgetInstanceIdCounter' => $document->widget_instance_id_counter(),
                 'widgetInstances' => [],
-                'siteSettings' => $site_settings,
+                'siteSettings' => [],
+                'components' => [],
                 'groupControls' => $this->group_controls,
                 'widgetCategories' => $this->categories,
                 'widgets' => $this->widgets,
@@ -226,8 +273,9 @@ class Editor
 
             <?php
 
-                $widget_instances_json = $document->widget_instances();
-                ?> FOXYAPP.widgetInstances = <?php echo $widget_instances_json; ?>; <?php
+                ?> FOXYAPP.widgetInstances = <?php echo $widget_instances_str; ?>; <?php
+                ?> FOXYAPP.siteSettings = <?php echo $site_settings_str; ?>; <?php
+                ?> FOXYAPP.components = <?php echo $components_str; ?>; <?php
 
                 foreach ($this->icon_libraries as $id => $library)
                 {
@@ -471,6 +519,7 @@ return FoxyRender.Printer.getOutput();
         $widgets = $widget_manager->build_widget_definitions();
 
         $widget_instance_sanitizer = new \FoxyBuilder\Modules\WidgetInstanceSanitizer($group_controls, $widgets);
+        $component_sanitizer = new \FoxyBuilder\Modules\ComponentSanitizer($widget_instance_sanitizer);
         
         $post_id = absint(\FoxyBuilder\Includes\Security::sanitize_request($_POST, 'template_id'));
 
@@ -489,6 +538,34 @@ return FoxyRender.Printer.getOutput();
                 update_option('foxybdr_site_settings', $site_settings_str);
             }
         }
+
+        if (isset($_POST['components']))
+        {
+            $components = json_decode(wp_unslash($_POST['components']), true);
+
+            if ($components !== null)
+            {
+                $components = wp_kses_post_deep($components);
+
+                $c_arr = [];
+
+                foreach ($components as $c)
+                {
+                    $sc = $component_sanitizer->sanitize($c);
+
+                    if ($sc !== null)
+                        $c_arr[] = $component_sanitizer->json_encode($sc);
+                }
+
+                $components = '[' . implode(',', $c_arr) . ']';
+
+                update_option('foxybdr_components', $components);
+            }
+        }
+
+        $optStr = get_option('foxybdr_components');
+        $components = json_decode($optStr, true);
+        $widget_instance_sanitizer->setComponents($components);
 
         if (isset($_POST['template']))
         {

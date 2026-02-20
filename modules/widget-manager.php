@@ -37,6 +37,7 @@ class WidgetManager
         require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/layout/section.php';
         require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/layout/column.php';
         require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/layout/block.php';
+        require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/layout/component.php';
         require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/basic/heading.php';
         require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/basic/text.php';
         require_once FOXYBUILDER_PLUGIN_PATH . '/modules/widgets/basic/image.php';
@@ -48,6 +49,7 @@ class WidgetManager
             new \FoxyBuilder\Modules\Widgets\Layout\Section(),
             new \FoxyBuilder\Modules\Widgets\Layout\Column(),
             new \FoxyBuilder\Modules\Widgets\Layout\Block(),
+            new \FoxyBuilder\Modules\Widgets\Layout\Component(),
             new \FoxyBuilder\Modules\Widgets\Basic\Heading(),
             new \FoxyBuilder\Modules\Widgets\Basic\Text(),
             new \FoxyBuilder\Modules\Widgets\Basic\Image(),

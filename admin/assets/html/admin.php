@@ -30,6 +30,22 @@ if (!defined('ABSPATH'))
     </div>
 </script>
 
+<script id="foxybdr-template-dialog-prompt" type="text/html">
+    <div class="foxybdr-dialog-prompt foxybdr-dialog">
+        <div class="foxybdr-dialog-box">
+            <div class="foxybdr-dialog-header">Prompt Dialog</div>
+            <div class="foxybdr-dialog-message">Enter info</div>
+            <div class="foxybdr-dialog-input">
+                <input type="text" value="" />
+            </div>
+            <div class="foxybdr-dialog-buttons">
+                <button class="foxybdr-dialog-cancel">Cancel</button>
+                <button class="foxybdr-dialog-ok">OK</button>
+            </div>
+        </div>
+    </div>
+</script>
+
 <script id="foxybdr-template-dialog-wait" type="text/html">
     <div class="foxybdr-dialog-wait foxybdr-dialog">
         <div class="foxybdr-dialog-box">

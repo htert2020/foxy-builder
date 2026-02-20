@@ -247,6 +247,16 @@ FoxyApp.Class.Renderer = class
         // TODO: Apply loop context and component context to sparse settings from widget instance.
         // sparseSettings must not be modified. If modification of setting values is necessary, return a new cloned copy of sparseSettings.
 
+        if (context.component !== undefined && context.component[wInstanceID] !== undefined)
+        {
+            sparseSettings = structuredClone(sparseSettings);
+
+            let cSettings = context.component[wInstanceID];
+
+            for (let settingName in cSettings)
+                sparseSettings[settingName] = cSettings[settingName];
+        }
+
         return sparseSettings;
     }
 
@@ -326,12 +336,12 @@ FoxyApp.Class.StylesheetGenerator = class
     {
         let widgetInstance = FoxyApp.Model.widgetInstances[wInstanceID];
 
-        if (widgetInstance === undefined || widgetInstance.data.widgetType !== 0)
+        if (widgetInstance === undefined)
             return '';
 
         this.#stylesheet = { desktop: {}, tablet: {}, mobile: {} };
 
-        let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetID];
+        let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetType === 0 ? widgetInstance.data.widgetID : 'foxybdr.layout.component'];
 
         let disabledSettingNames = this.#applySectionConditions(widgetInstance.data.sparseSettings, widget);
 
@@ -737,10 +747,7 @@ FoxyApp.Class.AssetFinder = class
         {
             let widgetInstance = FoxyApp.Model.widgetInstances[wInstanceID];
 
-            if (widgetInstance.data.widgetType !== 0)
-                return;
-    
-            let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetID];
+            let widget = FoxyApp.Model.widgets[widgetInstance.data.widgetType === 0 ? widgetInstance.data.widgetID : 'foxybdr.layout.component'];
     
             this.#evaluateSettings(widgetInstance.data.sparseSettings, widget.settings);
         }

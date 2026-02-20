@@ -15,6 +15,10 @@ class WidgetInstanceSanitizer
 
     private $widgets;
 
+	private $componentIDs = [];
+
+	private $cWidgetInstanceMap = [];
+
     public static $VALID_UNITS = [ '', ' ', 'px', '%', 'em', 'rem', 'vw', 'vh', 'deg', 's' ];
 
     public function __construct($group_controls, $widgets)
@@ -49,21 +53,26 @@ class WidgetInstanceSanitizer
 
             case 1:
                 if (isset($old_obj['widgetID']))
+				{
                     $new_obj['widgetID'] = (int)$old_obj['widgetID'];
+
+					if (in_array($new_obj['widgetID'], $this->componentIDs) === false)
+						return null;
+				}
                 break;
         }
 
         if (!isset($new_obj['widgetID']))
             return null;
 
-        if (!isset($old_obj['sparseSettings']) || !is_array($old_obj['sparseSettings']) || $this->array_is_list($old_obj['sparseSettings']))
-            return null;
-
-		$new_obj['sparseSettings'] = [];
-
-        if ($new_obj['widgetType'] === 0)
+		// Process the "sparseSettings" array
         {
-            $widgetID = $new_obj['widgetID'];
+			if (!isset($old_obj['sparseSettings']) || !is_array($old_obj['sparseSettings']) || $this->array_is_list($old_obj['sparseSettings']))
+	            return null;
+
+			$new_obj['sparseSettings'] = [];
+
+            $widgetID = $new_obj['widgetType'] === 0 ? $new_obj['widgetID'] : 'foxybdr.layout.component';
 
             if (!isset($this->widgets[$widgetID]))
 				return null;
@@ -83,6 +92,50 @@ class WidgetInstanceSanitizer
 					$new_obj['sparseSettings'][$setting_name] = $sanitized_value;
 			}
         }
+
+		// Process the "componentSettings" array
+		if ($new_obj['widgetType'] === 1)
+		{
+			if (!isset($old_obj['componentSettings']) || !is_array($old_obj['componentSettings']) || $this->array_is_list($old_obj['componentSettings']))
+	            return null;
+
+			$new_obj['componentSettings'] = [];
+
+			foreach ($old_obj['componentSettings'] as $wid => $settings)
+			{
+				if (!isset($this->cWidgetInstanceMap[$wid]))
+					continue;
+
+				$widget_instance = $this->cWidgetInstanceMap[$wid];
+
+				if ($widget_instance['widgetType'] !== 0)
+					continue;
+
+				$widgetID = $widget_instance['widgetID'];
+
+				if (!isset($this->widgets[$widgetID]))
+					continue;
+
+				$widget = &$this->widgets[$widgetID];
+
+				$new_settings = [];
+
+				foreach ($settings as $setting_name => $setting_value)
+				{
+					if (!isset($widget['settings'][$setting_name]))
+						continue;
+
+					$setting_params = &$widget['settings'][$setting_name];
+
+					$sanitized_value = $this->sanitize_control_value($setting_value, $setting_params);
+
+					if ($sanitized_value !== null)
+						$new_settings[$setting_name] = $sanitized_value;
+				}
+
+				$new_obj['componentSettings'][$wid] = $new_settings;
+			}
+		}
 
         $new_obj['children'] = [];
 
@@ -376,10 +429,11 @@ class WidgetInstanceSanitizer
 		$pairs[] = '"widgetType":' . json_encode($obj['widgetType']);
 		$pairs[] = '"widgetID":' . json_encode($obj['widgetID']);
 
-		$sparseSettings = [];
-        if ($obj['widgetType'] === 0)
+		// Process the "sparseSettings" array
         {
-            $widgetID = $obj['widgetID'];
+			$sparseSettings = [];
+
+            $widgetID = $obj['widgetType'] === 0 ? $obj['widgetID'] : 'foxybdr.layout.component';
 
 			$widget = &$this->widgets[$widgetID];
 
@@ -391,8 +445,39 @@ class WidgetInstanceSanitizer
 
 				$sparseSettings[] = '"' . $setting_name . '":' . $encoded_value;
 			}
+
+			$pairs[] = '"sparseSettings":{' . implode(',', $sparseSettings) . '}';
         }
-		$pairs[] = '"sparseSettings":{' . implode(',', $sparseSettings) . '}';
+
+		// Process the "componentSettings" array
+		if ($obj['widgetType'] === 1)
+		{
+			$componentSettings = [];
+
+			foreach ($obj['componentSettings'] as $wid => $settings)
+			{
+				$widget_instance = $this->cWidgetInstanceMap[$wid];
+
+				$widgetID = $widget_instance['widgetID'];
+
+				$widget = &$this->widgets[$widgetID];
+
+				$_settings = [];
+
+				foreach ($settings as $setting_name => $setting_value)
+				{
+					$setting_params = &$widget['settings'][$setting_name];
+
+					$encoded_value = $this->json_encode_control_value($setting_value, $setting_params);
+
+					$_settings[] = '"' . $setting_name . '":' . $encoded_value;
+				}
+
+				$componentSettings[] = '"' . $wid . '":{' . implode(',', $_settings) . '}';
+			}
+
+			$pairs[] = '"componentSettings":{' . implode(',', $componentSettings) . '}';
+		}
 
 		$children = [];
 		foreach ($obj['children'] as &$child)
@@ -480,6 +565,19 @@ class WidgetInstanceSanitizer
 
 		// We should never get here.
 		return null;
+	}
+
+	public function setComponents(&$sanitized_components)
+	{
+		foreach ($sanitized_components as $component)
+		{
+			$this->componentIDs[] = $component['id'];
+
+			foreach ($component['children'] as $widget_instance)
+			{
+				$this->cWidgetInstanceMap[$widget_instance['id']] = $widget_instance;
+			}
+		}
 	}
 
 	private function array_is_list(&$arr)

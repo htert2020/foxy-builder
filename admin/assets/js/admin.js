@@ -145,6 +145,96 @@ FoxyBuilder.Dialogs.Confirm = class extends FoxyBuilder.BaseClasses.Dialog {
     }
 };
 
+FoxyBuilder.Dialogs.Prompt = class extends FoxyBuilder.BaseClasses.Dialog
+{
+    #inputElement = null;
+    #cancelButtonElement = null;
+    #okButtonElement = null;
+
+    constructor(params)
+    {
+        super('prompt', params);
+
+        this.#inputElement = this.dialogElement.querySelector('.foxybdr-dialog-input > input');
+        this.#inputElement.value = this.params['inputValue'];
+        this.#inputElement.addEventListener('input', this);
+
+        this.#cancelButtonElement = this.dialogElement.querySelector('.foxybdr-dialog-cancel');
+        this.#cancelButtonElement.innerText = this.params['cancelLabel'];
+        this.#cancelButtonElement.addEventListener('click', this);
+
+        this.#okButtonElement = this.dialogElement.querySelector('.foxybdr-dialog-ok');
+        this.#okButtonElement.innerText = this.params['okLabel'];
+        this.#okButtonElement.addEventListener('click', this);
+
+        this.#updateOkButton();
+    }
+
+    create()
+    {
+        let retval = super.create();
+
+        this.#inputElement.focus();
+        this.#inputElement.select();
+
+        return retval;
+    }
+
+    handleEvent(e)
+    {
+        if (e.currentTarget === this.#inputElement && e.type === 'input')
+        {
+            this.#updateOkButton();
+        }
+        else if (e.currentTarget === this.#cancelButtonElement && e.type === 'click' && e.button === 0)
+        {
+            if (typeof this.params['onCancel'] === 'function')
+            {
+                this.params['onCancel']();
+            }
+
+            this.destroy();
+        }
+        else if (e.currentTarget === this.#okButtonElement && e.type === 'click' && e.button === 0)
+        {
+            if (typeof this.params['onOK'] === 'function')
+            {
+                this.params['onOK'](this.#inputElement.value);
+            }
+
+            this.destroy();
+        }
+    }
+
+    #updateOkButton()
+    {
+        if (this.#inputElement.value.trim().length === 0)
+        {
+            this.#okButtonElement.classList.add('foxybdr-disabled');
+            this.#okButtonElement.disabled = true;
+        }
+        else
+        {
+            this.#okButtonElement.classList.remove('foxybdr-disabled');
+            this.#okButtonElement.disabled = false;
+        }
+    }
+
+    destroy()
+    {
+        this.#inputElement.removeEventListener('input', this);
+        this.#inputElement = null;
+
+        this.#cancelButtonElement.removeEventListener('click', this);
+        this.#cancelButtonElement = null;
+
+        this.#okButtonElement.removeEventListener('click', this);
+        this.#okButtonElement = null;
+
+        super.destroy();
+    }
+};
+
 FoxyBuilder.Dialogs.Wait = class extends FoxyBuilder.BaseClasses.Dialog {
 
     constructor(params)

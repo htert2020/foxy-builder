@@ -88,7 +88,7 @@ ThePage::instance()->init();
 					<div id="foxybdr-panel">
 						<div id="foxybdr-panel-header" class="foxybdr-general-box">
 							<div id="foxybdr-panel-title"><span></span></div>
-							<div id="foxybdr-widgets-button"><span class="dashicons dashicons-screenoptions"></span></div>
+							<div id="foxybdr-widgets-button"><span class="dashicons dashicons-plus"></span></div>
 						</div>
 						<div id="foxybdr-panel-body" class="foxybdr-general-box">
 
@@ -108,7 +108,13 @@ ThePage::instance()->init();
 				<div id="foxybdr-drawer-resizer"></div>
 				<div id="foxybdr-drawer-resizer-button"><span class="dashicons dashicons-arrow-right"></span></div>
 				<div id="foxybdr-drawer">
-
+					<div class="foxybdr-header">
+						<div class="foxybdr-pin-button">
+							<span class="dashicons dashicons-admin-post"></span>
+						</div>
+					</div>
+					<div class="foxybdr-tabs"></div>
+					<div class="foxybdr-tab-body"></div>
 				</div>
 			</div>
 		</div>
@@ -135,8 +141,8 @@ ThePage::instance()->init();
 
 	<script id="foxybdr-tmpl-settings-layout-tabs" type="text/html">
 		<div class="foxybdr-settings-layout-tabs">
-			<div class="foxybdr-tabs"></div>
-			<div class="foxybdr-tab-body"></div>
+			<div class="foxybdr--tabs"></div>
+			<div class="foxybdr--tab--body"></div>
 		</div>
 	</script>
 
@@ -172,8 +178,25 @@ ThePage::instance()->init();
 
 	<script id="foxybdr-tmpl-widgets-module" type="text/html">
 		<div class="foxybdr-widgets-module">
-			<div class="foxybdr-header"></div>
-			<div class="foxybdr-body"></div>
+			<div class="foxybdr-tabs">
+				<div class="foxybdr-tab" foxybdr-name="widgets">Widgets</div>
+				<div class="foxybdr-tab" foxybdr-name="components">Components</div>
+			</div>
+			<div class="foxybdr--tab--body">
+				<div class="foxybdr-tab-page" foxybdr-name="widgets">
+					<div class="foxybdr-header"></div>
+					<div class="foxybdr-body"></div>
+				</div>
+				<div class="foxybdr-tab-page" foxybdr-name="components">
+					<div class="foxybdr-header"></div>
+					<div class="foxybdr-body">
+						<div class="foxybdr-empty-message">
+							<span>No components found.</span>
+						</div>
+						<div class="foxybdr-component-container"></div>
+					</div>
+				</div>
+			</div>
 		</div>
 	</script>
 
@@ -193,6 +216,42 @@ ThePage::instance()->init();
 		<div class="foxybdr-widget-card" draggable="true">
 			<i></i>
 			<span></span>
+		</div>
+	</script>
+
+	<script id="foxybdr-tmpl-drawer-template" type="text/html">
+		<div class="foxybdr-tab-page">
+			<div class="foxybdr-empty-message">
+				<span>Document is empty.</span>
+			</div>
+			<div class="foxybdr-tree-container"></div>
+		</div>
+	</script>
+
+	<script id="foxybdr-tmpl-drawer-components" type="text/html">
+		<div class="foxybdr-tab-page">
+			<div class="foxybdr-empty-message">
+				<span>No components found.</span>
+			</div>
+			<div class="foxybdr-tree-container"></div>
+		</div>
+	</script>
+
+	<script id="foxybdr-tmpl-tree-item" type="text/html">
+		<div class="foxybdr-tree-item">
+			<div class="foxybdr-header">
+				<div class="foxybdr-expander">
+					<span class="dashicons dashicons-arrow-right-alt2"></span>
+					<span class="dashicons dashicons-arrow-down-alt2"></span>
+				</div>
+				<div class="foxybdr-card">
+					<span class="foxybdr-title"></span>
+				</div>
+			</div>
+			<div class="foxybdr-dropdown">
+				<div class="foxybdr-spacer"></div>
+				<div class="foxybdr-container"></div>
+			</div>
 		</div>
 	</script>
 
